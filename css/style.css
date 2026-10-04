@@ -382,6 +382,76 @@ section[id] { scroll-margin-top: calc(var(--header-h) + 8px); }
   font-weight: 700;
 }
 
+.btn--sm { padding: 9px 16px; font-size: .9rem; }
+.product__sim { margin-top: 16px; width: 100%; }
+
+/* ---------- Simulador de orçamento ---------- */
+.sim {
+  display: grid;
+  grid-template-columns: 1fr 1.1fr;
+  gap: 64px;
+  align-items: start;
+}
+.sim__intro > p { color: var(--texto-suave); }
+.sim__tips {
+  display: grid;
+  gap: 12px;
+  margin-top: 28px;
+}
+.sim__tips li {
+  position: relative;
+  padding-left: 30px;
+  color: var(--texto-suave);
+}
+.sim__tips li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: .45em;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--laranja);
+}
+.sim__row {
+  display: grid;
+  grid-template-columns: 1fr 1fr .8fr;
+  gap: 14px;
+}
+.field__opt { font-weight: 400; color: var(--texto-suave); }
+.sim__result {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin: 8px 0 12px;
+}
+.sim__result div {
+  padding: 16px 18px;
+  border-radius: var(--raio-sm);
+  background: var(--azul-claro);
+}
+.sim__result span {
+  display: block;
+  font-size: .82rem;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--laranja-texto);
+}
+.sim__result strong {
+  display: block;
+  margin-top: 4px;
+  font-family: var(--fonte-titulo);
+  font-size: 1.6rem;
+  line-height: 1.2;
+  color: var(--azul);
+}
+.sim__note {
+  font-size: .88rem;
+  color: var(--texto-suave);
+  margin-bottom: 18px;
+}
+
 /* ---------- Como funciona ---------- */
 .steps {
   display: grid;
@@ -615,6 +685,16 @@ section[id] { scroll-margin-top: calc(var(--header-h) + 8px); }
 /* =========================================================
    Responsivo
    ========================================================= */
+@media (max-width: 1100px) {
+  .nav { gap: 20px; }
+  .nav__list { gap: 18px; }
+  .nav__link { font-size: .92rem; }
+}
+
+@media (min-width: 861px) and (max-width: 980px) {
+  .nav__cta { display: none; }
+}
+
 @media (max-width: 1024px) {
   .products,
   .testimonials { grid-template-columns: repeat(2, 1fr); }
@@ -669,6 +749,7 @@ section[id] { scroll-margin-top: calc(var(--header-h) + 8px); }
   .section__head { margin-bottom: 40px; }
 
   .contact { grid-template-columns: 1fr; }
+  .sim { grid-template-columns: 1fr; gap: 32px; }
 
   .gallery { grid-template-columns: repeat(2, 1fr); grid-auto-rows: 200px; }
   .gallery__item--wide { grid-column: span 2; }
@@ -692,6 +773,9 @@ section[id] { scroll-margin-top: calc(var(--header-h) + 8px); }
   .gallery { gap: 12px; grid-auto-rows: 160px; }
 
   .form { padding: 28px 20px; }
+  .sim__row { grid-template-columns: 1fr 1fr; }
+  .sim__qtd { grid-column: 1 / -1; }
+  .sim__result strong { font-size: 1.3rem; }
 
   .footer__inner { grid-template-columns: 1fr; }
 
