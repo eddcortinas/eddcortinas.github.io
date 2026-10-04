@@ -83,6 +83,8 @@ if ("IntersectionObserver" in window) {
         if (entry.isIntersecting) {
           entry.target.classList.add("is-visible");
           revealObserver.unobserve(entry.target);
+          // Depois da animação, tira as classes para não bloquear o efeito de passar o mouse
+          setTimeout(() => entry.target.classList.remove("reveal", "is-visible"), 700);
         }
       });
     },
@@ -167,10 +169,11 @@ let lista = [];
 try { lista = JSON.parse(localStorage.getItem(CHAVE_LISTA)) || []; } catch (e) { lista = []; }
 const salvarLista = () => { try { localStorage.setItem(CHAVE_LISTA, JSON.stringify(lista)); } catch (e) {} };
 
-// Aceita "2,50", "2.5" ou "250" (centímetros) e devolve metros
+// Aceita "2,50", "2.5" (metros), "250" (centímetros) ou "2500" (milímetros) e devolve metros
 function lerMedida(texto) {
   const n = parseFloat(String(texto).replace(/\s/g, "").replace(",", "."));
   if (!n || n <= 0) return 0;
+  if (n >= 1000) return n / 1000;
   return n > 20 ? n / 100 : n;
 }
 
@@ -242,6 +245,10 @@ function textoCalculo(s) {
     partes.push(`Medida real: ${numero.format(s.real)} ${un}. Aplicada a área mínima de ${numero.format(AREA_MINIMA)} ${un} por peça.`);
   }
   if (partes.length && s.qtd > 1) partes.push(`Total para ${s.qtd} peças.`);
+  if (s.largura > 10 || s.altura > 6) partes.push(`Confira as medidas: ${numero.format(s.largura)} m x ${numero.format(s.altura)} m.`);
+  if (s.acionamento === "Motorizado" && s.modelo && s.modelo !== "Cortina motorizada") {
+    partes.push("O motor não está incluído nesta estimativa; a motorização é confirmada no orçamento.");
+  }
   return partes.join(" ");
 }
 
