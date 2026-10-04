@@ -376,5 +376,77 @@ sim.addEventListener("submit", (e) => {
 
 renderLista();
 
+/* ---------- Galeria: ampliar a foto ao clicar ---------- */
+const fotosGaleria = [...document.querySelectorAll(".gallery__item img")];
+if (fotosGaleria.length) {
+  const caixa = document.createElement("div");
+  caixa.className = "lightbox";
+  caixa.hidden = true;
+  caixa.setAttribute("role", "dialog");
+  caixa.setAttribute("aria-modal", "true");
+  caixa.setAttribute("aria-label", "Foto ampliada");
+  caixa.innerHTML = `
+    <button type="button" class="lightbox__btn lightbox__fechar" aria-label="Fechar">✕</button>
+    <button type="button" class="lightbox__btn lightbox__ant" aria-label="Foto anterior">‹</button>
+    <figure class="lightbox__fig"><img alt=""><figcaption></figcaption></figure>
+    <button type="button" class="lightbox__btn lightbox__prox" aria-label="Próxima foto">›</button>`;
+  document.body.appendChild(caixa);
+  const imgGrande = caixa.querySelector("img");
+  const legenda = caixa.querySelector("figcaption");
+  let atual = 0;
+  let ultimoFoco = null;
+
+  const mostrar = (i) => {
+    atual = (i + fotosGaleria.length) % fotosGaleria.length;
+    const foto = fotosGaleria[atual];
+    imgGrande.src = foto.currentSrc || foto.src;
+    imgGrande.alt = foto.alt;
+    legenda.textContent = `${foto.alt.replace(/, projeto da EDD Cortinas em Fortaleza$/, "")} · ${atual + 1} de ${fotosGaleria.length}`;
+  };
+  const abrir = (i) => {
+    ultimoFoco = document.activeElement;
+    mostrar(i);
+    caixa.hidden = false;
+    document.body.classList.add("menu-aberto");
+    caixa.querySelector(".lightbox__fechar").focus();
+  };
+  const fechar = () => {
+    caixa.hidden = true;
+    document.body.classList.remove("menu-aberto");
+    if (ultimoFoco) ultimoFoco.focus();
+  };
+
+  fotosGaleria.forEach((foto, i) => {
+    const item = foto.closest(".gallery__item");
+    item.tabIndex = 0;
+    item.setAttribute("role", "button");
+    item.setAttribute("aria-label", `Ampliar foto: ${foto.alt}`);
+    item.addEventListener("click", () => { if (!item.classList.contains("is-placeholder")) abrir(i); });
+    item.addEventListener("keydown", (e) => {
+      if ((e.key === "Enter" || e.key === " ") && !item.classList.contains("is-placeholder")) { e.preventDefault(); abrir(i); }
+    });
+  });
+
+  caixa.querySelector(".lightbox__fechar").addEventListener("click", fechar);
+  caixa.querySelector(".lightbox__ant").addEventListener("click", () => mostrar(atual - 1));
+  caixa.querySelector(".lightbox__prox").addEventListener("click", () => mostrar(atual + 1));
+  caixa.addEventListener("click", (e) => { if (e.target === caixa || e.target.classList.contains("lightbox__fig")) fechar(); });
+  document.addEventListener("keydown", (e) => {
+    if (caixa.hidden) return;
+    if (e.key === "Escape") fechar();
+    if (e.key === "ArrowLeft") mostrar(atual - 1);
+    if (e.key === "ArrowRight") mostrar(atual + 1);
+  });
+  // Arrastar para os lados no celular
+  let toqueX = null;
+  caixa.addEventListener("touchstart", (e) => { toqueX = e.touches[0].clientX; }, { passive: true });
+  caixa.addEventListener("touchend", (e) => {
+    if (toqueX === null) return;
+    const dx = e.changedTouches[0].clientX - toqueX;
+    if (Math.abs(dx) > 50) mostrar(atual + (dx < 0 ? 1 : -1));
+    toqueX = null;
+  });
+}
+
 /* ---------- Ano atual no rodapé ---------- */
 document.querySelector("#ano").textContent = new Date().getFullYear();
