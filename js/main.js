@@ -152,6 +152,8 @@ form.addEventListener("submit", (e) => {
 const sim = document.querySelector("#form-simulador");
 const simErro = sim.querySelector(".form__error");
 const simArea = document.querySelector("#sim-area");
+const simAreaRotulo = document.querySelector("#sim-area-rotulo");
+const simCalculo = document.querySelector("#sim-calculo");
 const simValor = document.querySelector("#sim-valor");
 const simLista = document.querySelector("#sim-lista");
 const simItens = document.querySelector("#sim-itens");
@@ -172,15 +174,44 @@ function lerMedida(texto) {
   return n > 20 ? n / 100 : n;
 }
 
+/* Cortina de tecido: cobrada por metro de tecido.
+   Usa sempre 3x a largura (franzido). Até 2,80 m de altura conta só a largura;
+   acima disso o tecido é invertido e conta a altura de cada pano (rolo de 2,80 m). */
+const TECIDO_FRANZIDO = 3;
+const TECIDO_LARGURA_ROLO = 2.8;
+
+function calcularTecido(largura, altura) {
+  const larguraTecido = largura * TECIDO_FRANZIDO;
+  if (altura <= TECIDO_LARGURA_ROLO) {
+    return { metros: larguraTecido, calculo: `3x a largura = ${numero.format(larguraTecido)} m de tecido` };
+  }
+  const panos = Math.ceil(larguraTecido / TECIDO_LARGURA_ROLO - 1e-9);
+  return {
+    metros: panos * altura,
+    calculo: `altura acima de 2,80 m: tecido invertido, ${panos} pano${panos > 1 ? "s" : ""} x ${numero.format(altura)} m`,
+  };
+}
+
 function calcularSimulacao() {
   const opcao = sim.modelo.selectedOptions[0];
   const preco = opcao && opcao.dataset.preco ? parseFloat(opcao.dataset.preco) : 0;
+  const porTecido = !!(opcao && opcao.dataset.calculo === "tecido");
   const largura = lerMedida(sim.largura.value);
   const altura = lerMedida(sim.altura.value);
   const qtd = Math.max(1, parseInt(sim.quantidade.value, 10) || 1);
-  const area = largura * altura * qtd;
+  let medida = largura * altura * qtd;
+  let calculo = "";
+  if (porTecido) {
+    const t = largura && altura ? calcularTecido(largura, altura) : { metros: 0, calculo: "" };
+    medida = t.metros * qtd;
+    calculo = t.calculo;
+  }
   return {
-    modelo: sim.modelo.value, preco, largura, altura, qtd, area, valor: area * preco,
+    modelo: sim.modelo.value, preco, largura, altura, qtd,
+    area: largura && altura ? medida : 0,
+    unidade: porTecido ? "m" : "m²",
+    calculo,
+    valor: medida * preco,
     ambiente: sim.ambiente.value.trim(),
     acionamento: sim.acionamento.value,
     comando: sim.comando.value,
@@ -189,9 +220,15 @@ function calcularSimulacao() {
   };
 }
 
+// Texto da medida: "6,50 m²" ou "7,50 m de tecido"
+const textoMedida = (s) => (s.unidade === "m" ? `${numero.format(s.area)} m de tecido` : `${numero.format(s.area)} m²`);
+
 function atualizarSimulacao() {
   const s = calcularSimulacao();
-  simArea.textContent = s.area ? `${numero.format(s.area)} m²` : "—";
+  simAreaRotulo.textContent = s.unidade === "m" ? "Tecido necessário" : "Área total";
+  simArea.textContent = s.area ? (s.unidade === "m" ? `${numero.format(s.area)} m` : `${numero.format(s.area)} m²`) : "—";
+  simCalculo.textContent = s.calculo ? `Cálculo: ${s.calculo}${s.qtd > 1 ? `, x ${s.qtd} unidades` : ""}.` : "";
+  simCalculo.hidden = !s.calculo;
   if (s.modelo && !s.preco) simValor.textContent = "Sob consulta";
   else simValor.textContent = s.area && s.preco ? reais.format(s.valor) : "—";
 }
@@ -225,7 +262,7 @@ function renderLista() {
     const titulo = document.createElement("strong");
     titulo.textContent = `${s.qtd}x ${s.modelo}${s.ambiente ? " – " + s.ambiente : ""}`;
     const medidas = document.createElement("span");
-    medidas.textContent = [`${numero.format(s.largura)} x ${numero.format(s.altura)} m`, `${numero.format(s.area)} m²`, ...detalhes(s)].join(" · ");
+    medidas.textContent = [`${numero.format(s.largura)} x ${numero.format(s.altura)} m`, textoMedida(s), ...detalhes(s)].join(" · ");
     const remover = document.createElement("button");
     remover.type = "button";
     remover.className = "sim__remover";
@@ -278,7 +315,9 @@ function linhasItem(s, n) {
   return [
     `*${n ? n + ". " : ""}${s.modelo}*${s.ambiente ? " – " + s.ambiente : ""}`,
     `Medidas: ${numero.format(s.largura)} m (largura) x ${numero.format(s.altura)} m (altura)`,
-    `Quantidade: ${s.qtd} · Área: ${numero.format(s.area)} m²`,
+    s.unidade === "m"
+      ? `Quantidade: ${s.qtd} · Tecido: ${numero.format(s.area)} m (${s.calculo})`
+      : `Quantidade: ${s.qtd} · Área: ${numero.format(s.area)} m²`,
     detalhes(s).length ? `Opções: ${detalhes(s).join(", ")}` : null,
     s.preco ? `Valor estimado: ${reais.format(s.valor)}` : "Valor: sob consulta",
   ].filter(Boolean);
