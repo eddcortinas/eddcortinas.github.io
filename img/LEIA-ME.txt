@@ -1,0 +1,22 @@
+COMO COLOCAR SUAS FOTOS
+=======================
+
+Coloque as fotos nesta pasta (img) com EXATAMENTE estes nomes.
+Enquanto uma foto não existir, o site mostra um bloco cinza com a descrição.
+
+hero.jpg                          Foto grande do topo (vertical, ex.: 1200 x 1400)
+og-image.jpg                      Imagem que aparece ao compartilhar o link (1200 x 630)
+
+produto-tecido.jpg                Cortinas de tecido   (horizontal, ex.: 800 x 600)
+produto-blackout.jpg              Blackout
+produto-rolo.jpg                  Persianas rolô
+produto-horizontal-vertical.jpg   Persianas horizontais e verticais
+produto-romana.jpg                Romanas e painéis
+produto-motorizacao.jpg           Motorização
+
+projeto-1.jpg ... projeto-6.jpg   Galeria de projetos
+
+Dicas:
+- Use fotos .jpg com até ~300 KB cada (dá para reduzir em squoosh.app ou tinypng.com).
+- Depois de trocar as fotos dos projetos, edite no index.html o texto "alt"
+  de cada uma, descrevendo o ambiente (ajuda no Google).
