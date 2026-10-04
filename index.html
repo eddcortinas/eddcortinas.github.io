@@ -27,7 +27,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/style.css?v=6">
+  <link rel="stylesheet" href="css/style.css?v=7">
 
   <!-- Dados estruturados para o Google -->
   <script type="application/ld+json">
@@ -67,6 +67,7 @@
       <nav class="nav" id="menu" aria-label="Menu principal">
         <ul class="nav__list">
           <li><a href="#produtos" class="nav__link">Produtos</a></li>
+          <li><a href="#simulador" class="nav__link">Simular orçamento</a></li>
           <li><a href="#como-funciona" class="nav__link">Como funciona</a></li>
           <li><a href="#projetos" class="nav__link">Projetos</a></li>
           <li><a href="#contato" class="nav__link">Contato</a></li>
@@ -145,6 +146,7 @@
               <h3>Cortina de tecido</h3>
               <p>Linho, voil e fendy.</p>
               <p class="product__price">m² a partir de <strong>R$ 189,90</strong></p>
+              <button type="button" class="btn btn--outline btn--sm product__sim" data-modelo="Cortina de tecido">Simular este modelo</button>
             </div>
           </article>
 
@@ -156,6 +158,7 @@
               <h3>Cortina de tecido com blackout</h3>
               <p>Blackout nas cores branco, bege, cinza e marrom.</p>
               <p class="product__price">m² a partir de <strong>R$ 258,90</strong></p>
+              <button type="button" class="btn btn--outline btn--sm product__sim" data-modelo="Cortina de tecido com blackout">Simular este modelo</button>
             </div>
           </article>
 
@@ -167,6 +170,7 @@
               <h3>Cortina blackout acortinado</h3>
               <p>Blackout microfibra: off white, bege, marrom e cinza.</p>
               <p class="product__price">m² a partir de <strong>R$ 132,90</strong></p>
+              <button type="button" class="btn btn--outline btn--sm product__sim" data-modelo="Cortina blackout acortinado">Simular este modelo</button>
             </div>
           </article>
 
@@ -178,6 +182,7 @@
               <h3>Cortina painel</h3>
               <p>Coleções em tela solar, pinpoint e mais.</p>
               <p class="product__price">m² a partir de <strong>R$ 212,90</strong></p>
+              <button type="button" class="btn btn--outline btn--sm product__sim" data-modelo="Cortina painel">Simular este modelo</button>
             </div>
           </article>
 
@@ -189,6 +194,7 @@
               <h3>Cortina painel romano</h3>
               <p>Coleções em tela solar, pinpoint e mais.</p>
               <p class="product__price">m² a partir de <strong>R$ 239,90</strong></p>
+              <button type="button" class="btn btn--outline btn--sm product__sim" data-modelo="Cortina painel romano">Simular este modelo</button>
             </div>
           </article>
 
@@ -200,6 +206,7 @@
               <h3>Cortina rolô</h3>
               <p>Coleções em tela solar, pinpoint e mais.</p>
               <p class="product__price">m² a partir de <strong>R$ 199,90</strong></p>
+              <button type="button" class="btn btn--outline btn--sm product__sim" data-modelo="Cortina rolô">Simular este modelo</button>
             </div>
           </article>
 
@@ -211,6 +218,7 @@
               <h3>Cortina double vision</h3>
               <p>Off white, sand, black e mais. Não inclui o reposteiro de tecido.</p>
               <p class="product__price">m² a partir de <strong>R$ 398,90</strong></p>
+              <button type="button" class="btn btn--outline btn--sm product__sim" data-modelo="Cortina double vision">Simular este modelo</button>
             </div>
           </article>
 
@@ -222,6 +230,7 @@
               <h3>Persiana PH 50 mm</h3>
               <p>Cores branco, preto, bege e mais.</p>
               <p class="product__price">m² a partir de <strong>R$ 579,00</strong></p>
+              <button type="button" class="btn btn--outline btn--sm product__sim" data-modelo="Persiana PH 50 mm">Simular este modelo</button>
             </div>
           </article>
 
@@ -233,9 +242,80 @@
               <h3>Persiana vertical de tecido</h3>
               <p>Coleções nuance, tropical, unide e mais.</p>
               <p class="product__price">m² a partir de <strong>R$ 186,90</strong></p>
+              <button type="button" class="btn btn--outline btn--sm product__sim" data-modelo="Persiana vertical de tecido">Simular este modelo</button>
             </div>
           </article>
         </div>
+      </div>
+    </section>
+
+    <!-- 4b. SIMULADOR DE ORÇAMENTO -->
+    <section class="section section--soft" id="simulador">
+      <div class="container sim">
+        <div class="sim__intro">
+          <p class="eyebrow">Simule seu orçamento</p>
+          <h2>Escolha o modelo e informe as medidas</h2>
+          <p>Veja na hora uma estimativa de valor com base no preço por m² do nosso catálogo. Depois é só enviar pelo WhatsApp que a gente confirma tudo na visita técnica, sem compromisso.</p>
+          <ul class="sim__tips">
+            <li>Meça a largura e a altura da área que a cortina vai cobrir.</li>
+            <li>Pode digitar em metros (2,50) ou em centímetros (250).</li>
+            <li>Tem mais de uma janela igual? Ajuste a quantidade.</li>
+          </ul>
+        </div>
+
+        <form class="card form sim__form" id="form-simulador" novalidate>
+          <div class="field">
+            <label for="sim-modelo">Modelo da cortina</label>
+            <select id="sim-modelo" name="modelo" required>
+              <option value="" disabled selected>Selecione o modelo</option>
+              <option data-preco="189.90">Cortina de tecido</option>
+              <option data-preco="258.90">Cortina de tecido com blackout</option>
+              <option data-preco="132.90">Cortina blackout acortinado</option>
+              <option data-preco="212.90">Cortina painel</option>
+              <option data-preco="239.90">Cortina painel romano</option>
+              <option data-preco="199.90">Cortina rolô</option>
+              <option data-preco="398.90">Cortina double vision</option>
+              <option data-preco="579.00">Persiana PH 50 mm</option>
+              <option data-preco="186.90">Persiana vertical de tecido</option>
+            </select>
+          </div>
+
+          <div class="sim__row">
+            <div class="field">
+              <label for="sim-largura">Largura (m)</label>
+              <input type="text" id="sim-largura" name="largura" inputmode="decimal" placeholder="Ex.: 2,50" required>
+            </div>
+            <div class="field">
+              <label for="sim-altura">Altura (m)</label>
+              <input type="text" id="sim-altura" name="altura" inputmode="decimal" placeholder="Ex.: 2,60" required>
+            </div>
+            <div class="field sim__qtd">
+              <label for="sim-qtd">Quantidade</label>
+              <input type="number" id="sim-qtd" name="quantidade" min="1" max="50" value="1" required>
+            </div>
+          </div>
+
+          <div class="field">
+            <label for="sim-ambiente">Ambiente <span class="field__opt">(opcional)</span></label>
+            <input type="text" id="sim-ambiente" name="ambiente" placeholder="Ex.: sala, quarto do casal, escritório">
+          </div>
+
+          <div class="sim__result" aria-live="polite">
+            <div>
+              <span>Área total</span>
+              <strong id="sim-area">—</strong>
+            </div>
+            <div>
+              <span>Valor estimado</span>
+              <strong id="sim-valor">—</strong>
+            </div>
+          </div>
+          <p class="sim__note" id="sim-nota">Estimativa a partir do preço por m² do catálogo. O valor final depende do tecido, dos acessórios e da medição feita na visita técnica.</p>
+
+          <p class="form__error" role="alert" hidden></p>
+
+          <button type="submit" class="btn btn--primary btn--lg btn--block">Enviar simulação pelo WhatsApp</button>
+        </form>
       </div>
     </section>
 
@@ -426,6 +506,6 @@
     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 21l1.65-4.95A9 9 0 1 1 8 19.4L3 21z"/><g transform="translate(7.3 7.3) scale(.4)" stroke-width="4"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></g></svg>
   </a>
 
-  <script src="js/main.js?v=6" defer></script>
+  <script src="js/main.js?v=7" defer></script>
 </body>
 </html>
