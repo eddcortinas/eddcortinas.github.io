@@ -148,5 +148,87 @@ form.addEventListener("submit", (e) => {
   window.open(whatsappUrl(texto), "_blank", "noopener");
 });
 
+/* ---------- Simulador de orçamento ---------- */
+const sim = document.querySelector("#form-simulador");
+const simErro = sim.querySelector(".form__error");
+const simArea = document.querySelector("#sim-area");
+const simValor = document.querySelector("#sim-valor");
+const reais = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
+const numero = new Intl.NumberFormat("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+// Aceita "2,50", "2.5" ou "250" (centímetros) e devolve metros
+function lerMedida(texto) {
+  const n = parseFloat(String(texto).replace(/\s/g, "").replace(",", "."));
+  if (!n || n <= 0) return 0;
+  return n > 20 ? n / 100 : n;
+}
+
+function calcularSimulacao() {
+  const opcao = sim.modelo.selectedOptions[0];
+  const preco = opcao ? parseFloat(opcao.dataset.preco) : 0;
+  const largura = lerMedida(sim.largura.value);
+  const altura = lerMedida(sim.altura.value);
+  const qtd = Math.max(1, parseInt(sim.quantidade.value, 10) || 1);
+  const area = largura * altura * qtd;
+  return { modelo: sim.modelo.value, preco, largura, altura, qtd, area, valor: area * preco };
+}
+
+function atualizarSimulacao() {
+  const s = calcularSimulacao();
+  simArea.textContent = s.area ? `${numero.format(s.area)} m²` : "—";
+  simValor.textContent = s.area && s.preco ? reais.format(s.valor) : "—";
+}
+
+sim.addEventListener("input", atualizarSimulacao);
+sim.addEventListener("change", atualizarSimulacao);
+
+// Botões "Simular este modelo" nos produtos
+document.querySelectorAll(".product__sim").forEach((botao) => {
+  botao.addEventListener("click", () => {
+    sim.modelo.value = botao.dataset.modelo;
+    atualizarSimulacao();
+    document.querySelector("#simulador").scrollIntoView({ behavior: "smooth" });
+    setTimeout(() => sim.largura.focus({ preventScroll: true }), 600);
+  });
+});
+
+sim.addEventListener("submit", (e) => {
+  e.preventDefault();
+  const s = calcularSimulacao();
+
+  const faltando = [];
+  sim.querySelectorAll(".field").forEach((f) => f.classList.remove("is-invalid"));
+  if (!s.modelo) faltando.push(sim.modelo);
+  if (!s.largura) faltando.push(sim.largura);
+  if (!s.altura) faltando.push(sim.altura);
+
+  if (faltando.length) {
+    faltando.forEach((campo) => campo.closest(".field").classList.add("is-invalid"));
+    simErro.textContent = "Escolha o modelo e informe a largura e a altura.";
+    simErro.hidden = false;
+    faltando[0].focus();
+    return;
+  }
+  simErro.hidden = true;
+
+  const ambiente = sim.ambiente.value.trim();
+  const texto = [
+    "Olá, EDD Cortinas! Fiz uma simulação no site:",
+    "",
+    `*Modelo:* ${s.modelo}`,
+    `*Medidas:* ${numero.format(s.largura)} m (largura) x ${numero.format(s.altura)} m (altura)`,
+    `*Quantidade:* ${s.qtd}`,
+    `*Área total:* ${numero.format(s.area)} m²`,
+    `*Valor estimado:* ${reais.format(s.valor)}`,
+    ambiente ? `*Ambiente:* ${ambiente}` : null,
+    "",
+    "Gostaria de confirmar o orçamento e agendar uma visita técnica.",
+  ]
+    .filter((linha) => linha !== null)
+    .join("\n");
+
+  window.open(whatsappUrl(texto), "_blank", "noopener");
+});
+
 /* ---------- Ano atual no rodapé ---------- */
 document.querySelector("#ano").textContent = new Date().getFullYear();
