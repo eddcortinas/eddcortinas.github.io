@@ -673,6 +673,59 @@ section[id] { scroll-margin-top: calc(var(--header-h) + 8px); }
   margin-bottom: 14px;
 }
 
+.google-acoes {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+/* ---------- Perguntas frequentes ---------- */
+.faq {
+  display: grid;
+  grid-template-columns: .8fr 1.2fr;
+  gap: 56px;
+  align-items: start;
+}
+.faq .section__head { margin-bottom: 0; }
+.faq__lista { display: grid; gap: 12px; }
+.faq__item {
+  border-radius: var(--raio-sm);
+  background: var(--branco);
+  box-shadow: 0 1px 0 var(--borda);
+}
+.faq__item summary {
+  position: relative;
+  list-style: none;
+  cursor: pointer;
+  padding: 18px 52px 18px 20px;
+  font-weight: 700;
+  color: var(--azul);
+}
+.faq__item summary::-webkit-details-marker { display: none; }
+.faq__item summary::after {
+  content: "+";
+  position: absolute;
+  right: 18px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--azul-claro);
+  color: var(--azul);
+  font-size: 1.1rem;
+  line-height: 1;
+}
+.faq__item[open] summary::after { content: "–"; background: var(--laranja); color: var(--grafite); }
+.faq__item p {
+  margin: 0;
+  padding: 0 20px 18px;
+  color: var(--texto-suave);
+}
+
 /* ---------- Depoimentos ---------- */
 .testimonials {
   display: grid;
@@ -934,6 +987,7 @@ section[id] { scroll-margin-top: calc(var(--header-h) + 8px); }
   .contact { grid-template-columns: 1fr; }
   .sim { grid-template-columns: 1fr; gap: 32px; }
   .sobre { grid-template-columns: 1fr; gap: 32px; }
+  .faq { grid-template-columns: 1fr; gap: 28px; }
   .sobre__media { aspect-ratio: 4 / 3; }
 
   .gallery { grid-template-columns: repeat(2, 1fr); grid-auto-rows: 200px; }
