@@ -369,6 +369,18 @@ section[id] { scroll-margin-top: calc(var(--header-h) + 8px); }
 }
 .product__body { padding: 24px 26px 28px; }
 .product__body p { color: var(--texto-suave); margin: 0; font-size: 1rem; }
+.product__body .product__price {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--areia-escura);
+  color: var(--azul);
+  font-size: .9rem;
+}
+.product__price strong {
+  font-family: var(--fonte-titulo);
+  font-size: 1.3rem;
+  font-weight: 700;
+}
 
 /* ---------- Como funciona ---------- */
 .steps {
@@ -402,6 +414,7 @@ section[id] { scroll-margin-top: calc(var(--header-h) + 8px); }
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   grid-auto-rows: 260px;
+  grid-auto-flow: dense;
   gap: 20px;
 }
 .gallery__item--tall { grid-row: span 2; }
