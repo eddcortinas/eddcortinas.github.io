@@ -165,7 +165,7 @@ function lerMedida(texto) {
 
 function calcularSimulacao() {
   const opcao = sim.modelo.selectedOptions[0];
-  const preco = opcao ? parseFloat(opcao.dataset.preco) : 0;
+  const preco = opcao && opcao.dataset.preco ? parseFloat(opcao.dataset.preco) : 0;
   const largura = lerMedida(sim.largura.value);
   const altura = lerMedida(sim.altura.value);
   const qtd = Math.max(1, parseInt(sim.quantidade.value, 10) || 1);
@@ -176,7 +176,8 @@ function calcularSimulacao() {
 function atualizarSimulacao() {
   const s = calcularSimulacao();
   simArea.textContent = s.area ? `${numero.format(s.area)} m²` : "—";
-  simValor.textContent = s.area && s.preco ? reais.format(s.valor) : "—";
+  if (s.modelo && !s.preco) simValor.textContent = "Sob consulta";
+  else simValor.textContent = s.area && s.preco ? reais.format(s.valor) : "—";
 }
 
 sim.addEventListener("input", atualizarSimulacao);
@@ -219,7 +220,7 @@ sim.addEventListener("submit", (e) => {
     `*Medidas:* ${numero.format(s.largura)} m (largura) x ${numero.format(s.altura)} m (altura)`,
     `*Quantidade:* ${s.qtd}`,
     `*Área total:* ${numero.format(s.area)} m²`,
-    `*Valor estimado:* ${reais.format(s.valor)}`,
+    s.preco ? `*Valor estimado:* ${reais.format(s.valor)}` : "*Valor:* sob consulta",
     ambiente ? `*Ambiente:* ${ambiente}` : null,
     "",
     "Gostaria de confirmar o orçamento e agendar uma visita técnica.",
