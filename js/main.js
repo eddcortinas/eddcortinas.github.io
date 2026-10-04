@@ -177,6 +177,7 @@ function lerMedida(texto) {
 /* Cortina de tecido: cobrada por metro de tecido.
    Usa sempre 3x a largura (franzido). Até 2,80 m de altura conta só a largura;
    acima disso o tecido é invertido e conta a altura de cada pano (rolo de 2,80 m). */
+const AREA_MINIMA = 1.5; // por peça: 1,5 m² (ou 1,5 m de tecido na cortina de tecido)
 const TECIDO_FRANZIDO = 3;
 const TECIDO_LARGURA_ROLO = 2.8;
 
@@ -199,16 +200,22 @@ function calcularSimulacao() {
   const largura = lerMedida(sim.largura.value);
   const altura = lerMedida(sim.altura.value);
   const qtd = Math.max(1, parseInt(sim.quantidade.value, 10) || 1);
-  let medida = largura * altura * qtd;
+  // Medida de UMA peça: m² (largura x altura) ou metros de tecido
+  let real = largura * altura;
   let calculo = "";
   if (porTecido) {
     const t = largura && altura ? calcularTecido(largura, altura) : { metros: 0, calculo: "" };
-    medida = t.metros * qtd;
+    real = t.metros;
     calculo = t.calculo;
   }
+  // Área mínima por peça
+  const minimo = !!(largura && altura) && real < AREA_MINIMA;
+  const cobrada = minimo ? AREA_MINIMA : real;
+  const medida = cobrada * qtd;
   return {
     modelo: sim.modelo.value, preco, largura, altura, qtd,
     area: largura && altura ? medida : 0,
+    real, minimo,
     unidade: porTecido ? "m" : "m²",
     calculo,
     valor: medida * preco,
@@ -220,15 +227,29 @@ function calcularSimulacao() {
   };
 }
 
-// Texto da medida: "6,50 m²" ou "7,50 m de tecido"
-const textoMedida = (s) => (s.unidade === "m" ? `${numero.format(s.area)} m de tecido` : `${numero.format(s.area)} m²`);
+// Texto da medida: "6,50 m²" ou "7,50 m de tecido" (com aviso de área mínima)
+const textoMedida = (s) =>
+  (s.unidade === "m" ? `${numero.format(s.area)} m de tecido` : `${numero.format(s.area)} m²`) + (s.minimo ? " (área mínima)" : "");
+
+// Explicação mostrada abaixo do resultado
+function textoCalculo(s) {
+  const partes = [];
+  if (s.calculo) partes.push(`Cálculo: ${s.calculo}.`);
+  if (s.minimo) {
+    const un = s.unidade === "m" ? "m de tecido" : "m²";
+    partes.push(`Medida real: ${numero.format(s.real)} ${un}. Aplicada a área mínima de ${numero.format(AREA_MINIMA)} ${un} por peça.`);
+  }
+  if (partes.length && s.qtd > 1) partes.push(`Total para ${s.qtd} peças.`);
+  return partes.join(" ");
+}
 
 function atualizarSimulacao() {
   const s = calcularSimulacao();
   simAreaRotulo.textContent = s.unidade === "m" ? "Tecido necessário" : "Área total";
   simArea.textContent = s.area ? (s.unidade === "m" ? `${numero.format(s.area)} m` : `${numero.format(s.area)} m²`) : "—";
-  simCalculo.textContent = s.calculo ? `Cálculo: ${s.calculo}${s.qtd > 1 ? `, x ${s.qtd} unidades` : ""}.` : "";
-  simCalculo.hidden = !s.calculo;
+  if (s.minimo) simArea.insertAdjacentHTML("beforeend", ' <small class="sim__min">área mínima</small>');
+  simCalculo.textContent = textoCalculo(s);
+  simCalculo.hidden = !simCalculo.textContent;
   if (s.modelo && !s.preco) simValor.textContent = "Sob consulta";
   else simValor.textContent = s.area && s.preco ? reais.format(s.valor) : "—";
 }
@@ -318,6 +339,9 @@ function linhasItem(s, n) {
     s.unidade === "m"
       ? `Quantidade: ${s.qtd} · Tecido: ${numero.format(s.area)} m (${s.calculo})`
       : `Quantidade: ${s.qtd} · Área: ${numero.format(s.area)} m²`,
+    s.minimo
+      ? `Área mínima aplicada: ${numero.format(AREA_MINIMA)} ${s.unidade === "m" ? "m de tecido" : "m²"} por peça (medida real ${numero.format(s.real)})`
+      : null,
     detalhes(s).length ? `Opções: ${detalhes(s).join(", ")}` : null,
     s.preco ? `Valor estimado: ${reais.format(s.valor)}` : "Valor: sob consulta",
   ].filter(Boolean);
