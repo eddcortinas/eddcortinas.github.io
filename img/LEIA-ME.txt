@@ -1,22 +1,28 @@
-COMO COLOCAR SUAS FOTOS
-=======================
+FOTOS DO SITE
+=============
 
-Coloque as fotos nesta pasta (img) com EXATAMENTE estes nomes.
-Enquanto uma foto não existir, o site mostra um bloco cinza com a descrição.
+As fotos dos produtos vieram do catálogo da EDD Cortinas no Canva.
+A foto do topo e as fotos dos projetos são de trabalhos reais da EDD Cortinas.
+Para trocar uma foto, envie outra com EXATAMENTE o mesmo nome para esta pasta (img).
+Se uma foto não existir, o site mostra um bloco cinza com a descrição.
 
-hero.jpg                          Foto grande do topo (vertical, ex.: 1200 x 1400)
+logo-edd-cortinas.png             Logo (fundo transparente)
+hero.jpg                          Foto grande do topo (vertical)
 og-image.jpg                      Imagem que aparece ao compartilhar o link (1200 x 630)
 
-produto-tecido.jpg                Cortinas de tecido   (horizontal, ex.: 800 x 600)
-produto-blackout.jpg              Blackout
-produto-rolo.jpg                  Persianas rolô
-produto-horizontal-vertical.jpg   Persianas horizontais e verticais
-produto-romana.jpg                Romanas e painéis
-produto-motorizacao.jpg           Motorização
+produto-tecido.jpg                Cortina de tecido            (quadrada, 720 x 720)
+produto-tecido-blackout.jpg       Cortina de tecido com blackout
+produto-blackout-acortinado.jpg   Cortina blackout acortinado
+produto-painel.jpg                Cortina painel
+produto-painel-romano.jpg         Cortina painel romano
+produto-rolo.jpg                  Cortina rolô
+produto-double-vision.jpg         Cortina double vision
+produto-ph50.jpg                  Persiana PH 50 mm
+produto-vertical-tecido.jpg       Persiana vertical de tecido
 
-projeto-1.jpg ... projeto-6.jpg   Galeria de projetos
+projeto-01.jpg ... projeto-12.jpg Galeria de projetos
 
 Dicas:
 - Use fotos .jpg com até ~300 KB cada (dá para reduzir em squoosh.app ou tinypng.com).
-- Depois de trocar as fotos dos projetos, edite no index.html o texto "alt"
-  de cada uma, descrevendo o ambiente (ajuda no Google).
+- Ao trocar uma foto de projeto, atualize no index.html o texto "alt" dela,
+  descrevendo o ambiente (ajuda no Google).
