@@ -1,28 +1,29 @@
 FOTOS DO SITE
 =============
 
-As fotos dos produtos vieram do catálogo da EDD Cortinas no Canva.
-A foto do topo e as fotos dos projetos são de trabalhos reais da EDD Cortinas.
 Para trocar uma foto, envie outra com EXATAMENTE o mesmo nome para esta pasta (img).
 Se uma foto não existir, o site mostra um bloco cinza com a descrição.
 
 logo-edd-cortinas.png             Logo (fundo transparente)
-hero.jpg                          Foto grande do topo (vertical)
+hero.jpg                          Foto grande do topo (vertical, 900 x 1200)
+sobre.jpg                         Foto da seção "Sobre nós" (vertical, 900 x 1200)
 og-image.jpg                      Imagem que aparece ao compartilhar o link (1200 x 630)
 
-produto-tecido.jpg                Cortina de tecido            (quadrada, 720 x 720)
+Produtos (horizontal 960 x 720 ou quadrada 720 x 720):
+produto-tecido.jpg                Cortina de tecido
+produto-tecido-blackout.jpg       Cortina de tecido com blackout
 produto-rolo.jpg                  Cortina rolô
 produto-romana.jpg                Cortina romana
 produto-painel.jpg                Cortina painel
 produto-double-vision.jpg         Cortina double vision
-produto-motorizada.jpg            Cortina motorizada (ainda falta esta foto)
+produto-motorizada.jpg            Cortina motorizada
 produto-vertical-tecido.jpg       Persiana vertical de tecido
 produto-vertical-pvc.jpg          Persiana vertical de PVC
 produto-horizontal-25.jpg         Persiana horizontal 25 mm
 produto-ph50.jpg                  Persiana horizontal 50 mm alumínio
 produto-horizontal-50-madeira.jpg Persiana horizontal 50 mm madeira
 
-projeto-01.jpg ... projeto-12.jpg Galeria de projetos
+projeto-01.jpg ... projeto-12.jpg Galeria de projetos (abrem ampliadas ao clicar)
 
 Dicas:
 - Use fotos .jpg com até ~300 KB cada (dá para reduzir em squoosh.app ou tinypng.com).
