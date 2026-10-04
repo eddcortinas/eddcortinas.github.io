@@ -11,14 +11,16 @@ hero.jpg                          Foto grande do topo (vertical)
 og-image.jpg                      Imagem que aparece ao compartilhar o link (1200 x 630)
 
 produto-tecido.jpg                Cortina de tecido            (quadrada, 720 x 720)
-produto-tecido-blackout.jpg       Cortina de tecido com blackout
-produto-blackout-acortinado.jpg   Cortina blackout acortinado
-produto-painel.jpg                Cortina painel
-produto-painel-romano.jpg         Cortina painel romano
 produto-rolo.jpg                  Cortina rolô
+produto-romana.jpg                Cortina romana
+produto-painel.jpg                Cortina painel
 produto-double-vision.jpg         Cortina double vision
-produto-ph50.jpg                  Persiana PH 50 mm
+produto-motorizada.jpg            Cortina motorizada (ainda falta esta foto)
 produto-vertical-tecido.jpg       Persiana vertical de tecido
+produto-vertical-pvc.jpg          Persiana vertical de PVC
+produto-horizontal-25.jpg         Persiana horizontal 25 mm
+produto-ph50.jpg                  Persiana horizontal 50 mm alumínio
+produto-horizontal-50-madeira.jpg Persiana horizontal 50 mm madeira
 
 projeto-01.jpg ... projeto-12.jpg Galeria de projetos
 
