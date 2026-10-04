@@ -558,6 +558,121 @@ section[id] { scroll-margin-top: calc(var(--header-h) + 8px); }
 .gallery__item--tall { grid-row: span 2; }
 .gallery__item--wide { grid-column: span 2; }
 
+/* ---------- Galeria: foto ampliada ---------- */
+.gallery__item { cursor: zoom-in; transition: transform .25s, box-shadow .25s; }
+.gallery__item:hover { transform: translateY(-3px); box-shadow: var(--sombra); }
+.gallery__item:focus-visible { outline: 3px solid var(--laranja); outline-offset: 3px; }
+.lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 56px 16px;
+  background: rgba(7, 19, 56, .93);
+}
+.lightbox[hidden] { display: none; }
+.lightbox__fig {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  max-width: 100%;
+  max-height: 100%;
+}
+.lightbox__fig img {
+  max-width: min(1000px, 100%);
+  max-height: calc(100vh - 150px);
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  border-radius: 12px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, .45);
+}
+.lightbox__fig figcaption { color: rgba(244, 241, 234, .85); font-size: .92rem; text-align: center; }
+.lightbox__btn {
+  position: absolute;
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(244, 241, 234, .14);
+  color: var(--areia);
+  font: 400 1.9rem/1 var(--fonte-texto);
+  cursor: pointer;
+  transition: background-color .2s;
+}
+.lightbox__btn:hover { background: rgba(244, 241, 234, .28); }
+.lightbox__fechar { top: 14px; right: 14px; font-size: 1.3rem; }
+.lightbox__ant { left: 14px; top: 50%; transform: translateY(-50%); }
+.lightbox__prox { right: 14px; top: 50%; transform: translateY(-50%); }
+@media (max-width: 600px) {
+  .lightbox { padding: 64px 8px 72px; }
+  .lightbox__ant, .lightbox__prox { top: auto; bottom: 14px; transform: none; }
+  .lightbox__ant { left: calc(50% - 60px); }
+  .lightbox__prox { right: calc(50% - 60px); }
+}
+
+/* ---------- Sobre nós ---------- */
+.sobre {
+  display: grid;
+  grid-template-columns: .9fr 1.1fr;
+  gap: 64px;
+  align-items: center;
+}
+.sobre__media {
+  aspect-ratio: 4 / 5;
+  border-radius: 28px;
+  box-shadow: var(--sombra);
+}
+.sobre__texto > p { color: var(--texto-suave); }
+.sobre__destaques {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+  margin-top: 30px;
+}
+.sobre__destaques li {
+  padding: 18px 16px;
+  border-radius: var(--raio-sm);
+  background: var(--branco);
+  box-shadow: 0 1px 0 var(--borda);
+}
+.sobre__destaques strong {
+  display: block;
+  font-family: var(--fonte-titulo);
+  font-size: 1.35rem;
+  line-height: 1.2;
+  color: var(--azul);
+}
+.sobre__destaques span { font-size: .9rem; color: var(--texto-suave); }
+
+/* ---------- Avaliações ---------- */
+.google-nota {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  padding: 12px 18px;
+  border-radius: var(--raio-sm);
+  background: var(--branco);
+  text-decoration: none;
+  box-shadow: 0 1px 0 var(--borda);
+}
+.google-nota strong { font-family: var(--fonte-titulo); font-size: 1.8rem; color: var(--azul); line-height: 1; }
+.google-nota__estrelas { color: #f2a51a; letter-spacing: 2px; font-size: 1.1rem; }
+.google-nota span:last-child { font-size: .9rem; color: var(--texto-suave); }
+.google-nota:hover span:last-child { text-decoration: underline; }
+.testimonial__estrelas {
+  color: #f2a51a;
+  letter-spacing: 3px;
+  font-size: 1.15rem;
+  margin-bottom: 14px;
+}
+
 /* ---------- Depoimentos ---------- */
 .testimonials {
   display: grid;
@@ -818,6 +933,8 @@ section[id] { scroll-margin-top: calc(var(--header-h) + 8px); }
 
   .contact { grid-template-columns: 1fr; }
   .sim { grid-template-columns: 1fr; gap: 32px; }
+  .sobre { grid-template-columns: 1fr; gap: 32px; }
+  .sobre__media { aspect-ratio: 4 / 3; }
 
   .gallery { grid-template-columns: repeat(2, 1fr); grid-auto-rows: 200px; }
   .gallery__item--wide { grid-column: span 2; }
@@ -845,6 +962,7 @@ section[id] { scroll-margin-top: calc(var(--header-h) + 8px); }
   .sim__qtd { grid-column: 1 / -1; }
   .sim__result strong { font-size: 1.3rem; }
   .sim__row--2, .sim__actions { grid-template-columns: 1fr; }
+  .sobre__destaques { grid-template-columns: 1fr; }
 
   .footer__inner { grid-template-columns: 1fr; }
 
