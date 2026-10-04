@@ -174,22 +174,23 @@ function lerMedida(texto) {
   return n > 20 ? n / 100 : n;
 }
 
-/* Cortina de tecido: cobrada por metro de tecido.
-   Usa sempre 3x a largura (franzido). Até 2,80 m de altura conta só a largura;
-   acima disso o tecido é invertido e conta a altura de cada pano (rolo de 2,80 m). */
-const AREA_MINIMA = 1.5; // por peça: 1,5 m² (ou 1,5 m de tecido na cortina de tecido)
+/* Cortinas de tecido: cobradas por metro de tecido.
+   Usam sempre 3x a largura (franzido). Até a altura do rolo conta só a largura;
+   acima disso o tecido é invertido e conta a altura de cada pano.
+   A altura do rolo vem de data-alturamax no <option> (tecido: 2,80 m; tecido com blackout: 2,70 m). */
+const AREA_MINIMA = 1.5; // por peça: 1,5 m² (ou 1,5 m de tecido nas cortinas de tecido)
 const TECIDO_FRANZIDO = 3;
 const TECIDO_LARGURA_ROLO = 2.8;
 
-function calcularTecido(largura, altura) {
+function calcularTecido(largura, altura, alturaRolo = TECIDO_LARGURA_ROLO) {
   const larguraTecido = largura * TECIDO_FRANZIDO;
-  if (altura <= TECIDO_LARGURA_ROLO) {
+  if (altura <= alturaRolo) {
     return { metros: larguraTecido, calculo: `3x a largura = ${numero.format(larguraTecido)} m de tecido` };
   }
-  const panos = Math.ceil(larguraTecido / TECIDO_LARGURA_ROLO - 1e-9);
+  const panos = Math.ceil(larguraTecido / alturaRolo - 1e-9);
   return {
     metros: panos * altura,
-    calculo: `altura acima de 2,80 m: tecido invertido, ${panos} pano${panos > 1 ? "s" : ""} x ${numero.format(altura)} m`,
+    calculo: `altura acima de ${numero.format(alturaRolo)} m: tecido invertido, ${panos} pano${panos > 1 ? "s" : ""} x ${numero.format(altura)} m`,
   };
 }
 
@@ -204,7 +205,8 @@ function calcularSimulacao() {
   let real = largura * altura;
   let calculo = "";
   if (porTecido) {
-    const t = largura && altura ? calcularTecido(largura, altura) : { metros: 0, calculo: "" };
+    const alturaRolo = parseFloat(opcao.dataset.alturamax) || TECIDO_LARGURA_ROLO;
+    const t = largura && altura ? calcularTecido(largura, altura, alturaRolo) : { metros: 0, calculo: "" };
     real = t.metros;
     calculo = t.calculo;
   }
