@@ -451,6 +451,57 @@ section[id] { scroll-margin-top: calc(var(--header-h) + 8px); }
   color: var(--texto-suave);
   margin-bottom: 18px;
 }
+.sim__row--2 { grid-template-columns: 1fr 1fr; }
+.sim__extras {
+  margin-bottom: 18px;
+  border: 1.5px dashed var(--borda);
+  border-radius: var(--raio-sm);
+  padding: 12px 16px 0;
+}
+.sim__extras summary {
+  cursor: pointer;
+  font-weight: 600;
+  font-size: .95rem;
+  color: var(--azul);
+  padding-bottom: 12px;
+}
+.sim__extras[open] summary { margin-bottom: 4px; }
+.sim__actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.sim__actions .btn { padding-inline: 14px; }
+.sim__lista {
+  margin-top: 26px;
+  padding-top: 22px;
+  border-top: 1px solid var(--areia-escura);
+}
+.sim__lista h3 { font-size: 1.2rem; margin-bottom: 12px; }
+.sim__lista ul { display: grid; gap: 10px; margin-bottom: 14px; }
+.sim__item {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: var(--raio-sm);
+  background: var(--areia);
+  font-size: .93rem;
+}
+.sim__item strong { display: block; color: var(--azul); }
+.sim__item span { color: var(--texto-suave); }
+.sim__item-valor { white-space: nowrap; font-weight: 700; color: var(--azul); }
+.sim__remover {
+  border: 0;
+  background: none;
+  color: #a2412f;
+  font: 600 .85rem var(--fonte-texto);
+  cursor: pointer;
+  padding: 2px 0 0;
+}
+.sim__total { font-size: 1.05rem; margin-bottom: 8px; }
+.sim__total strong { font-family: var(--fonte-titulo); font-size: 1.4rem; color: var(--azul); }
 
 /* ---------- Como funciona ---------- */
 .steps {
@@ -776,6 +827,7 @@ section[id] { scroll-margin-top: calc(var(--header-h) + 8px); }
   .sim__row { grid-template-columns: 1fr 1fr; }
   .sim__qtd { grid-column: 1 / -1; }
   .sim__result strong { font-size: 1.3rem; }
+  .sim__row--2, .sim__actions { grid-template-columns: 1fr; }
 
   .footer__inner { grid-template-columns: 1fr; }
 
