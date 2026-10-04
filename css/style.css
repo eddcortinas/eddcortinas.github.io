@@ -452,6 +452,18 @@ section[id] { scroll-margin-top: calc(var(--header-h) + 8px); }
   margin-bottom: 18px;
 }
 .sim__row--2 { grid-template-columns: 1fr 1fr; }
+.sim__min {
+  display: inline-block;
+  vertical-align: middle;
+  margin-left: 6px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--laranja);
+  color: var(--grafite);
+  font: 700 .7rem/1.4 var(--fonte-texto);
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
 .sim__calculo {
   margin: -4px 0 8px;
   font-weight: 600;
