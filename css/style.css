@@ -385,6 +385,27 @@ section[id] { scroll-margin-top: calc(var(--header-h) + 8px); }
 .btn--sm { padding: 9px 16px; font-size: .9rem; }
 .product__sim { margin-top: 16px; width: 100%; }
 
+/* ---------- Guia de medição ---------- */
+.medir {
+  margin-top: 28px;
+  padding: 22px 22px 8px;
+  border-radius: var(--raio);
+  background: var(--branco);
+  box-shadow: 0 1px 0 var(--borda);
+}
+.medir h3 { font-size: 1.15rem; margin-bottom: 10px; }
+.medir__desenho { display: block; width: 100%; max-width: 340px; margin: 0 auto 10px; }
+.medir__parede { fill: var(--areia); stroke: var(--borda); stroke-width: 1.5; }
+.medir__vao { fill: #dfe7f5; stroke: var(--azul); stroke-width: 2.5; }
+.medir__divisao { stroke: var(--azul); stroke-width: 1.5; }
+.medir__seta { fill: none; stroke: var(--laranja-texto); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.medir__texto { font: 700 12px var(--fonte-texto); fill: var(--laranja-texto); text-anchor: middle; }
+.medir__legenda { font: 600 11px var(--fonte-texto); fill: var(--texto-suave); text-anchor: middle; }
+.medir__passos { display: grid; gap: 10px; margin-bottom: 14px; }
+.medir__passos li { font-size: .93rem; color: var(--texto-suave); padding-left: 16px; position: relative; }
+.medir__passos li::before { content: ""; position: absolute; left: 0; top: .6em; width: 6px; height: 6px; border-radius: 50%; background: var(--laranja); }
+.medir__passos strong { color: var(--grafite); }
+
 /* ---------- Outros serviços ---------- */
 .servicos {
   display: grid;
@@ -411,6 +432,30 @@ section[id] { scroll-margin-top: calc(var(--header-h) + 8px); }
   stroke-linejoin: round;
 }
 .servico p { flex: 1; color: var(--texto-suave); margin-bottom: 20px; }
+.servico__precos {
+  width: 100%;
+  margin: -6px 0 18px;
+  border-top: 1px solid var(--areia-escura);
+}
+.servico__precos li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--areia-escura);
+  font-size: .9rem;
+  color: var(--texto-suave);
+}
+.servico__precos strong { color: var(--azul); white-space: nowrap; }
+.servico__precos small { font-weight: 500; color: var(--texto-suave); }
+.servico__simular {
+  margin: -6px 0 16px;
+  font-weight: 700;
+  font-size: .92rem;
+  color: var(--azul);
+  text-decoration: none;
+}
+.servico__simular:hover { text-decoration: underline; }
 
 /* ---------- Simulador de orçamento ---------- */
 .sim {
