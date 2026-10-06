@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- Página interna: não aparece no Google e não tem link no site -->
+  <meta name="robots" content="noindex, nofollow">
+  <title>Gerador de orçamento | EDD Cortinas</title>
+  <link rel="icon" href="img/favicon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="img/favicon-180.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/orcamento.css?v=2">
+</head>
+<body>
+  <header class="topo">
+    <img src="img/logo-edd-cortinas.png" alt="EDD Cortinas" class="topo__logo">
+    <div>
+      <h1>Gerador de orçamento</h1>
+      <p>Preencha e baixe o PDF com a sua logo. Os dados ficam salvos só neste aparelho.</p>
+    </div>
+  </header>
+
+  <main class="pagina">
+    <form id="orc" novalidate>
+      <!-- Dados do orçamento -->
+      <section class="bloco">
+        <h2>Orçamento</h2>
+        <div class="grade grade--4">
+          <label>Nº do orçamento<input name="numero" required></label>
+          <label>Data<input type="date" name="data" required></label>
+          <label>Previsão de entrega<input type="date" name="previsao"></label>
+          <label>Vendedor<input name="vendedor" value="Edduardo Henrique"></label>
+        </div>
+      </section>
+
+      <!-- Cliente -->
+      <section class="bloco">
+        <h2>Cliente</h2>
+        <div class="grade grade--3">
+          <label class="col-2">Nome / Razão social<input name="cliente" required></label>
+          <label>CPF / CNPJ<input name="documento"></label>
+          <label class="col-2">Endereço<input name="endereco"></label>
+          <label>Bairro<input name="bairro"></label>
+          <label>Cidade<input name="cidade" value="Fortaleza"></label>
+          <label>CEP<input name="cep" inputmode="numeric" maxlength="9"></label>
+          <label>Telefone<input name="telefone" inputmode="numeric" maxlength="16"></label>
+        </div>
+      </section>
+
+      <!-- Itens -->
+      <section class="bloco">
+        <div class="bloco__titulo">
+          <h2>Itens</h2>
+          <span class="dica">Medidas em metros (2,50), centímetros (250) ou milímetros (2500).</span>
+        </div>
+        <div id="itens"></div>
+        <button type="button" class="btn btn--linha" id="add-item">+ Adicionar item</button>
+      </section>
+
+      <!-- Totais e observações -->
+      <section class="bloco">
+        <h2>Totais e observações</h2>
+        <div class="grade grade--3">
+          <label>Frete (R$)<input name="frete" inputmode="decimal" placeholder="0,00"></label>
+          <label>Desconto (R$)<input name="desconto" inputmode="decimal" placeholder="0,00"></label>
+          <label>ou desconto (%)<input name="descontoPct" inputmode="decimal" placeholder="0"></label>
+        </div>
+        <label>Observações<textarea name="obs" rows="2" placeholder="Ex.: desconto à vista; no cartão, juros da maquininha."></textarea></label>
+        <label>Considerações gerais (uma por linha)<textarea name="consideracoes" rows="7"></textarea></label>
+        <label>Fotos do ambiente (opcional, até 2)<input type="file" name="fotos" accept="image/*" multiple></label>
+
+        <div class="resumo" aria-live="polite">
+          <div><span>Subtotal</span><strong id="r-subtotal">R$ 0,00</strong></div>
+          <div><span>Frete</span><strong id="r-frete">R$ 0,00</strong></div>
+          <div><span>Desconto</span><strong id="r-desconto">R$ 0,00</strong></div>
+          <div class="resumo__total"><span>Total</span><strong id="r-total">R$ 0,00</strong></div>
+        </div>
+      </section>
+
+      <p class="erro" id="erro" role="alert" hidden></p>
+
+      <div class="acoes">
+        <button type="button" class="btn btn--linha" id="novo">Novo orçamento</button>
+        <button type="submit" class="btn btn--primario">Baixar PDF</button>
+      </div>
+    </form>
+  </main>
+
+  <template id="tpl-item">
+    <div class="item">
+      <div class="grade grade--item">
+        <label>Ambiente<input data-campo="ambiente" placeholder="Sala"></label>
+        <label class="col-2">Modelo<select data-campo="modelo"></select></label>
+        <label>Largura<input data-campo="largura" inputmode="decimal" maxlength="7"></label>
+        <label>Altura<input data-campo="altura" inputmode="decimal" maxlength="7"></label>
+        <label>Qtd<input data-campo="qtd" inputmode="numeric" maxlength="3" value="1"></label>
+        <label class="col-3">Descrição (tecido, cor, comando, instalação...)<input data-campo="descricao"></label>
+        <label>Valor unitário<input data-campo="unitario" inputmode="decimal" placeholder="automático"></label>
+        <label>Valor do item<output data-campo="total">R$ 0,00</output></label>
+      </div>
+      <p class="item__calc" data-campo="calc"></p>
+      <button type="button" class="item__remover" aria-label="Remover item">Remover</button>
+    </div>
+  </template>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js" defer></script>
+  <script src="js/orcamento.js?v=2" defer></script>
+</body>
+</html>
