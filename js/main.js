@@ -217,13 +217,19 @@ function calcularSimulacao() {
   const minimo = !!(largura && altura) && real < AREA_MINIMA;
   const cobrada = minimo ? AREA_MINIMA : real;
   const medida = cobrada * qtd;
+  // Toldo: tecido por m² + valor fixo de acessórios por peça
+  const acessorios = opcao && opcao.dataset.acessorios ? parseFloat(opcao.dataset.acessorios) : 0;
+  if (acessorios && largura && altura) {
+    calculo = `tecido ${numero.format(cobrada)} m² x ${reais.format(preco)} + acessórios ${reais.format(acessorios)} por peça`;
+  }
   return {
     modelo: sim.modelo.value, preco, largura, altura, qtd,
     area: largura && altura ? medida : 0,
     real, minimo,
     unidade: porTecido ? "m" : "m²",
     calculo,
-    valor: medida * preco,
+    acessorios,
+    valor: medida * preco + (largura && altura ? acessorios * qtd : 0),
     ambiente: sim.ambiente.value.trim(),
     acionamento: sim.acionamento.value,
     comando: sim.comando.value,
@@ -318,6 +324,25 @@ function limparMedidas() {
   atualizarSimulacao();
 }
 
+// Campos de número: aceitam só números (medidas também aceitam uma vírgula decimal)
+function limparMedidaDigitada(campo) {
+  let v = campo.value.replace(/\./g, ",").replace(/[^\d,]/g, "");
+  const [inteiro, ...resto] = v.split(",");
+  v = resto.length ? `${inteiro},${resto.join("").slice(0, 2)}` : inteiro;
+  if (v !== campo.value) campo.value = v;
+}
+[sim.largura, sim.altura].forEach((campo) => campo.addEventListener("input", () => limparMedidaDigitada(campo)));
+
+sim.quantidade.addEventListener("input", () => {
+  const v = sim.quantidade.value.replace(/\D/g, "").slice(0, 2);
+  if (v !== sim.quantidade.value) sim.quantidade.value = v;
+});
+sim.quantidade.addEventListener("blur", () => {
+  const n = parseInt(sim.quantidade.value, 10);
+  sim.quantidade.value = String(Math.min(50, Math.max(1, n || 1)));
+  atualizarSimulacao();
+});
+
 sim.addEventListener("input", atualizarSimulacao);
 sim.addEventListener("change", atualizarSimulacao);
 
@@ -348,6 +373,7 @@ function linhasItem(s, n) {
     s.unidade === "m"
       ? `Quantidade: ${s.qtd} · Tecido: ${numero.format(s.area)} m (${s.calculo})`
       : `Quantidade: ${s.qtd} · Área: ${numero.format(s.area)} m²`,
+    s.acessorios ? `Acessórios: ${reais.format(s.acessorios)} por peça` : null,
     s.minimo
       ? `Área mínima aplicada: ${numero.format(AREA_MINIMA)} ${s.unidade === "m" ? "m de tecido" : "m²"} por peça (medida real ${numero.format(s.real)})`
       : null,
@@ -374,12 +400,31 @@ sim.addEventListener("submit", (e) => {
     itens.length > 1 && soma ? `\n*Total estimado:* ${reais.format(soma)}${itens.some((s) => !s.preco) ? " + itens sob consulta" : ""}` : null,
     "",
     "Gostaria de confirmar o orçamento e agendar uma visita técnica.",
+    "",
+    `Link do pedido (para a EDD montar o orçamento): ${linkOrcamento(itens)}`,
   ]
     .filter((linha) => linha !== null)
     .join("\n");
 
   window.open(whatsappUrl(texto), "_blank", "noopener");
 });
+
+/* Link que abre a página de orçamento (orcamento.html) já preenchida com os itens.
+   Os dados vão dentro do próprio link (depois do #), nada fica salvo em servidor. */
+function linkOrcamento(itens) {
+  const dados = itens.map((s) => ({
+    m: s.modelo,
+    a: s.ambiente || "",
+    l: s.largura,
+    h: s.altura,
+    q: s.qtd,
+    d: [s.acionamento, s.comando && `comando ${s.comando.toLowerCase()}`, s.instalacao, s.cor].filter(Boolean).join(", "),
+  }));
+  const json = JSON.stringify(dados);
+  const b64 = btoa(String.fromCharCode(...new TextEncoder().encode(json)))
+    .replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  return `${new URL("orcamento.html", location.href).href}#i=${b64}`;
+}
 
 renderLista();
 
@@ -403,16 +448,19 @@ if (fotosGaleria.length) {
   let atual = 0;
   let ultimoFoco = null;
 
+  // Só as fotos visíveis (respeita o filtro por ambiente)
+  const visiveis = () => fotosGaleria.filter((f) => !f.closest(".gallery__item").classList.contains("is-filtrado"));
   const mostrar = (i) => {
-    atual = (i + fotosGaleria.length) % fotosGaleria.length;
-    const foto = fotosGaleria[atual];
+    const lista = visiveis();
+    atual = (i + lista.length) % lista.length;
+    const foto = lista[atual];
     imgGrande.src = foto.currentSrc || foto.src;
     imgGrande.alt = foto.alt;
-    legenda.textContent = `${foto.alt.replace(/, projeto da EDD Cortinas em Fortaleza$/, "")} · ${atual + 1} de ${fotosGaleria.length}`;
+    legenda.textContent = `${foto.alt.replace(/, projeto da EDD Cortinas em Fortaleza$/, "")} · ${atual + 1} de ${lista.length}`;
   };
   const abrir = (i) => {
     ultimoFoco = document.activeElement;
-    mostrar(i);
+    mostrar(Math.max(0, visiveis().indexOf(fotosGaleria[i])));
     caixa.hidden = false;
     document.body.classList.add("menu-aberto");
     caixa.querySelector(".lightbox__fechar").focus();
