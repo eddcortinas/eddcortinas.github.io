@@ -29,6 +29,8 @@ const CONSIDERACOES_PADRAO = [
 const AREA_MINIMA = 1.5;
 const TECIDO_FRANZIDO = 3;
 const CHAVE_RASCUNHO = "edd-orcamento-rascunho";
+// Cada link de pedido tem o próprio rascunho; sem link, usa o rascunho geral
+let chaveRascunho = CHAVE_RASCUNHO;
 const CHAVE_ULTIMO = "edd-orcamento-ultimo-numero";
 
 const reais = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
@@ -83,6 +85,7 @@ async function carregarModelos() {
         alturamax: parseFloat(op.dataset.alturamax) || 2.8,
         acessorios: parseFloat(op.dataset.acessorios) || 0,
         acessoriosNome: op.dataset.acessoriosNome || "acessórios",
+        guia: parseFloat(op.dataset.guia) || 0,
       });
     });
   } catch (e) {
@@ -132,10 +135,13 @@ function calcularItem(dados) {
   }
   const minimo = real < AREA_MINIMA;
   const cobrada = minimo ? AREA_MINIMA : real;
-  const total = cobrada * preco * qtd + (m.acessorios || 0) * qtd;
+  // Guia opcional (rolô): (altura x 2 + largura) x valor do metro da guia, por peça
+  const valorGuia = m.guia && dados.guia ? (altura * 2 + largura) * m.guia : 0;
+  const total = cobrada * preco * qtd + (m.acessorios || 0) * qtd + valorGuia * qtd;
 
   const partes = [`${numero.format(cobrada)} ${un} x ${reais.format(preco)}`];
   if (m.acessorios) partes.push(`+ ${m.acessoriosNome || "acessórios"} ${reais.format(m.acessorios)}`);
+  if (valorGuia) partes.push(`+ guia ${reais.format(valorGuia)}`);
   if (qtd > 1) partes.push(`x ${qtd} peças`);
   if (extra) partes.push(`(${extra})`);
   if (minimo) partes.push(`- área mínima (real ${numero.format(real)} ${un})`);
@@ -155,8 +161,18 @@ function adicionarItem(dados = {}) {
   sel.innerHTML = opcoesModelo();
   Object.entries(dados).forEach(([k, v]) => {
     const campo = el.querySelector(`[data-campo="${k}"]`);
-    if (campo && "value" in campo && campo.tagName !== "OUTPUT") campo.value = v;
+    if (campo && campo.type === "checkbox") campo.checked = !!v;
+    else if (campo && "value" in campo && campo.tagName !== "OUTPUT") campo.value = v;
   });
+  // A opção de guia só aparece nos modelos que têm guia
+  const caixaGuia = el.querySelector(".item__guia");
+  const mostrarGuia = () => {
+    const m = MODELOS[sel.value];
+    caixaGuia.hidden = !(m && m.guia);
+    if (caixaGuia.hidden) caixaGuia.querySelector("input").checked = false;
+  };
+  sel.addEventListener("change", mostrarGuia);
+  mostrarGuia();
   ["largura", "altura", "unitario"].forEach((k) => {
     const c = el.querySelector(`[data-campo="${k}"]`);
     c.addEventListener("input", () => soNumerosDecimal(c));
@@ -171,7 +187,10 @@ function adicionarItem(dados = {}) {
 function lerItens() {
   return [...listaItens.querySelectorAll(".item")].map((el) => {
     const d = {};
-    el.querySelectorAll("[data-campo]").forEach((c) => { if (c.tagName !== "OUTPUT" && c.tagName !== "P") d[c.dataset.campo] = c.value; });
+    el.querySelectorAll("[data-campo]").forEach((c) => {
+      if (c.type === "checkbox") d[c.dataset.campo] = c.checked ? "1" : "";
+      else if (c.tagName !== "OUTPUT" && c.tagName !== "P") d[c.dataset.campo] = c.value;
+    });
     return d;
   });
 }
@@ -208,11 +227,11 @@ function salvarRascunho() {
     [...form.elements].forEach((c) => { if (c.name && c.type !== "file") campos[c.name] = c.value; });
     // Guarda também o nome do modelo, para o rascunho não trocar de modelo se a lista mudar
     const itens = lerItens().map((d) => ({ ...d, nome: MODELOS[d.modelo] ? MODELOS[d.modelo].nome : "" }));
-    localStorage.setItem(CHAVE_RASCUNHO, JSON.stringify({ campos, itens }));
+    localStorage.setItem(chaveRascunho, JSON.stringify({ campos, itens }));
   } catch (e) {}
 }
 function carregarRascunho() {
-  try { return JSON.parse(localStorage.getItem(CHAVE_RASCUNHO)); } catch (e) { return null; }
+  try { return JSON.parse(localStorage.getItem(chaveRascunho)); } catch (e) { return null; }
 }
 function proximoNumero() {
   try { const n = parseInt(localStorage.getItem(CHAVE_ULTIMO), 10); return n ? String(n + 1) : ""; } catch (e) { return ""; }
@@ -245,7 +264,14 @@ form.addEventListener("input", atualizar);
 form.addEventListener("change", atualizar);
 document.querySelector("#add-item").addEventListener("click", () => adicionarItem());
 document.querySelector("#novo").addEventListener("click", () => {
-  if (confirm("Começar um orçamento novo? O atual será apagado da tela.")) novoOrcamento();
+  if (!confirm("Começar um orçamento novo? O atual sai da tela.")) return;
+  // Se veio de um link, o pedido dele continua guardado; o novo usa o rascunho geral
+  if (chaveRascunho !== CHAVE_RASCUNHO) {
+    chaveRascunho = CHAVE_RASCUNHO;
+    history.replaceState(null, "", location.pathname);
+    erro.hidden = true;
+  }
+  novoOrcamento();
 });
 
 /* ---------- PDF ---------- */
@@ -333,7 +359,7 @@ async function gerarPDF() {
   // Tabela de itens
   const linhas = t.itens.filter((i) => MODELOS[i.dados.modelo]).map(({ dados, r }) => {
     const m = MODELOS[dados.modelo];
-    const desc = [m.nome.toUpperCase(), dados.descricao, r.medida].filter(Boolean).join("\n");
+    const desc = [m.nome.toUpperCase(), m.guia && dados.guia && "Com guia", dados.descricao, r.medida].filter(Boolean).join("\n");
     return [txt(dados.ambiente || "-"), txt(desc), String(r.qtd || 1), txt(reais.format(r.total))];
   });
   doc.autoTable({
@@ -454,6 +480,13 @@ function lerPedidoDoLink() {
   }
 }
 
+// Identificador curto de cada link (para guardar o rascunho dele separado)
+function idDoLink(texto) {
+  let h = 5381;
+  for (let i = 0; i < texto.length; i++) h = ((h * 33) ^ texto.charCodeAt(i)) >>> 0;
+  return h.toString(36);
+}
+
 function carregarPedido(pedido) {
   novoOrcamento();
   listaItens.innerHTML = "";
@@ -465,20 +498,25 @@ function carregarPedido(pedido) {
       largura: p.l ? numero.format(p.l) : "",
       altura: p.h ? numero.format(p.h) : "",
       qtd: String(p.q || 1),
+      guia: p.g ? "1" : "",
       descricao: p.d || (indice < 0 && p.m ? p.m : ""),
     });
   });
   if (!pedido.length) adicionarItem();
 }
 
+// Abrir outro link com esta página já aberta: recarrega para carregar o pedido certo
+window.addEventListener("hashchange", () => { if (lerPedidoDoLink()) location.reload(); });
+
 /* ---------- Início ---------- */
 (async () => {
   await carregarModelos();
   const pedido = lerPedidoDoLink();
-  if (pedido) history.replaceState(null, "", location.pathname);
+  // O link fica no endereço: abrir o mesmo link de novo volta para o mesmo orçamento,
+  // e links de clientes diferentes nunca se sobrepõem
+  if (pedido) chaveRascunho = `${CHAVE_RASCUNHO}-${idDoLink(location.hash)}`;
   const r = carregarRascunho();
-  const temRascunho = r && r.itens && r.itens.some((i) => i.modelo);
-  if (pedido && (!temRascunho || confirm("Abrir o pedido do cliente? O orçamento que está na tela será substituído."))) {
+  if (pedido && !(r && r.campos)) {
     carregarPedido(pedido);
     erro.textContent = "Pedido do cliente carregado. Confira as medidas da visita e preencha os dados do cliente.";
     erro.style.color = "#0B1D54";

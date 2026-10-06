@@ -160,6 +160,7 @@ const simValor = document.querySelector("#sim-valor");
 const simLista = document.querySelector("#sim-lista");
 const simItens = document.querySelector("#sim-itens");
 const simTotal = document.querySelector("#sim-total");
+const campoGuia = document.querySelector("#sim-guia-campo");
 const reais = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
 const numero = new Intl.NumberFormat("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const CHAVE_LISTA = "edd-lista-orcamento";
@@ -219,6 +220,10 @@ function calcularSimulacao() {
   const medida = cobrada * qtd;
   // Toldo: tecido por m² + valor fixo de acessórios por peça (entra no valor, sem mostrar a conta)
   const acessorios = opcao && opcao.dataset.acessorios ? parseFloat(opcao.dataset.acessorios) : 0;
+  // Guia opcional (rolô): (altura x 2 + largura) x valor do metro da guia, por peça
+  const precoGuia = opcao && opcao.dataset.guia ? parseFloat(opcao.dataset.guia) : 0;
+  const guia = !!(precoGuia && sim.guia.checked);
+  const valorGuia = guia && largura && altura ? (altura * 2 + largura) * precoGuia : 0;
   return {
     modelo: sim.modelo.value, preco, largura, altura, qtd,
     area: largura && altura ? medida : 0,
@@ -226,7 +231,8 @@ function calcularSimulacao() {
     unidade: porTecido ? "m" : "m²",
     calculo,
     acessorios,
-    valor: medida * preco + (largura && altura ? acessorios * qtd : 0),
+    guia,
+    valor: medida * preco + (largura && altura ? acessorios * qtd : 0) + valorGuia * qtd,
     ambiente: sim.ambiente.value.trim(),
     acionamento: sim.acionamento.value,
     comando: sim.comando.value,
@@ -256,6 +262,11 @@ function textoCalculo(s) {
 }
 
 function atualizarSimulacao() {
+  // A opção de guia só aparece nos modelos que têm guia
+  const opcao = sim.modelo.selectedOptions[0];
+  const temGuia = !!(opcao && opcao.dataset.guia);
+  campoGuia.hidden = !temGuia;
+  if (!temGuia) sim.guia.checked = false;
   const s = calcularSimulacao();
   simAreaRotulo.textContent = s.unidade === "m" ? "Tecido necessário" : "Área total";
   simArea.textContent = s.area ? (s.unidade === "m" ? `${numero.format(s.area)} m` : `${numero.format(s.area)} m²`) : "—";
@@ -283,7 +294,7 @@ function validarSimulacao(s) {
   return true;
 }
 
-const detalhes = (s) => [s.acionamento, s.comando && `comando ${s.comando.toLowerCase()}`, s.instalacao, s.cor].filter(Boolean);
+const detalhes = (s) => [s.guia && "com guia", s.acionamento, s.comando && `comando ${s.comando.toLowerCase()}`, s.instalacao, s.cor].filter(Boolean);
 
 function renderLista() {
   simLista.hidden = lista.length === 0;
@@ -412,6 +423,13 @@ sim.addEventListener("submit", (e) => {
     .join("\n");
 
   window.open(whatsappUrl(texto), "_blank", "noopener");
+
+  // Pedido enviado: limpa a lista para o próximo pedido não levar junto os itens deste
+  lista = [];
+  salvarLista();
+  renderLista();
+  sim.guia.checked = false;
+  limparMedidas();
 });
 
 /* Link que abre a página de orçamento (orcamento.html) já preenchida com os itens.
@@ -423,6 +441,7 @@ function linkOrcamento(itens) {
     l: s.largura,
     h: s.altura,
     q: s.qtd,
+    g: s.guia ? 1 : 0,
     d: [s.acionamento, s.comando && `comando ${s.comando.toLowerCase()}`, s.instalacao, s.cor].filter(Boolean).join(", "),
   }));
   const json = JSON.stringify(dados);
