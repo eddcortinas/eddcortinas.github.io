@@ -12,7 +12,7 @@ const EMPRESA = {
     "(85) 9 8733-4369 - eddcortinas@gmail.com",
     "CNPJ 72.170.673/0001-09",
   ],
-  site: "eddcortinas.github.io",
+  site: "eddcortinas.com.br",
   logo: "img/logo-edd-cortinas.png",
 };
 
@@ -207,7 +207,9 @@ function salvarRascunho() {
   try {
     const campos = {};
     [...form.elements].forEach((c) => { if (c.name && c.type !== "file") campos[c.name] = c.value; });
-    localStorage.setItem(CHAVE_RASCUNHO, JSON.stringify({ campos, itens: lerItens() }));
+    // Guarda também o nome do modelo, para o rascunho não trocar de modelo se a lista mudar
+    const itens = lerItens().map((d) => ({ ...d, nome: MODELOS[d.modelo] ? MODELOS[d.modelo].nome : "" }));
+    localStorage.setItem(CHAVE_RASCUNHO, JSON.stringify({ campos, itens }));
   } catch (e) {}
 }
 function carregarRascunho() {
@@ -484,7 +486,10 @@ function carregarPedido(pedido) {
     erro.hidden = false;
   } else if (r && r.campos) {
     Object.entries(r.campos).forEach(([k, v]) => { if (form[k] && form[k].type !== "file") form[k].value = v; });
-    (r.itens && r.itens.length ? r.itens : [{}]).forEach((d) => adicionarItem(d));
+    (r.itens && r.itens.length ? r.itens : [{}]).forEach(({ nome, ...d }) => {
+      if (nome) { const i = MODELOS.findIndex((m) => m.nome === nome); d.modelo = i >= 0 ? String(i) : ""; }
+      adicionarItem(d);
+    });
   } else {
     novoOrcamento();
   }
