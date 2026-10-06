@@ -11,15 +11,29 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/orcamento.css?v=3">
+  <link rel="stylesheet" href="css/orcamento.css?v=4">
 </head>
-<body>
+<body class="bloqueado">
+  <!-- Login: a página só abre depois de entrar -->
+  <section class="login" id="login">
+    <form class="login__caixa" id="form-login" novalidate>
+      <img src="img/logo-edd-cortinas.png" alt="EDD Cortinas" class="login__logo">
+      <h1>Gerador de orçamento</h1>
+      <label>Login<input name="usuario" autocomplete="username" autocapitalize="none" required></label>
+      <label>Senha<input type="password" name="senha" autocomplete="current-password" required></label>
+      <label class="login__lembrar"><input type="checkbox" name="lembrar" checked> Lembrar neste aparelho</label>
+      <p class="erro" id="login-erro" role="alert" hidden></p>
+      <button type="submit" class="btn btn--primario">Entrar</button>
+    </form>
+  </section>
+
   <header class="topo">
     <img src="img/logo-edd-cortinas.png" alt="EDD Cortinas" class="topo__logo">
     <div>
       <h1>Gerador de orçamento</h1>
       <p>Preencha e baixe o PDF com a sua logo. Os dados ficam salvos só neste aparelho.</p>
     </div>
+    <button type="button" class="btn btn--linha topo__sair" id="sair">Sair</button>
   </header>
 
   <main class="pagina">
@@ -108,6 +122,6 @@
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js" defer></script>
-  <script src="js/orcamento.js?v=7" defer></script>
+  <script src="js/orcamento.js?v=8" defer></script>
 </body>
 </html>
