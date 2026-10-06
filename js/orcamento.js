@@ -508,8 +508,67 @@ function carregarPedido(pedido) {
 // Abrir outro link com esta página já aberta: recarrega para carregar o pedido certo
 window.addEventListener("hashchange", () => { if (lerPedidoDoLink()) location.reload(); });
 
-/* ---------- Início ---------- */
-(async () => {
+/* ---------- Login ----------
+   Site estático: o login é conferido no navegador. Aqui só fica um código gerado
+   a partir da senha (PBKDF2), nunca a senha em si. */
+const ACESSO = {
+  usuario: "edduardo",
+  codigo: "851a360e0241da9ae68e0dbaa9e4a43864027f8ad2fb2bea4b902b4e99bd186b",
+};
+const CHAVE_ACESSO = "edd-orcamento-acesso";
+const formLogin = document.querySelector("#form-login");
+const loginErro = document.querySelector("#login-erro");
+
+async function codigoDaSenha(usuario, senha) {
+  const enc = new TextEncoder();
+  const chave = await crypto.subtle.importKey("raw", enc.encode(senha), "PBKDF2", false, ["deriveBits"]);
+  const bits = await crypto.subtle.deriveBits(
+    { name: "PBKDF2", hash: "SHA-256", salt: enc.encode(`edd-cortinas:${usuario}`), iterations: 150000 },
+    chave, 256
+  );
+  return [...new Uint8Array(bits)].map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+function acessoSalvo() {
+  try { return (localStorage.getItem(CHAVE_ACESSO) || sessionStorage.getItem(CHAVE_ACESSO)) === ACESSO.codigo; } catch (e) { return false; }
+}
+function liberar() {
+  document.body.classList.remove("bloqueado");
+  iniciar();
+}
+
+formLogin.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  loginErro.hidden = true;
+  const usuario = formLogin.usuario.value.trim().toLowerCase();
+  const senha = formLogin.senha.value;
+  const botao = formLogin.querySelector("button");
+  botao.disabled = true;
+  const ok = usuario === ACESSO.usuario && (await codigoDaSenha(usuario, senha)) === ACESSO.codigo;
+  botao.disabled = false;
+  if (!ok) {
+    loginErro.textContent = "Login ou senha incorretos.";
+    loginErro.hidden = false;
+    formLogin.senha.value = "";
+    formLogin.senha.focus();
+    return;
+  }
+  try {
+    (formLogin.lembrar.checked ? localStorage : sessionStorage).setItem(CHAVE_ACESSO, ACESSO.codigo);
+  } catch (err) {}
+  formLogin.reset();
+  liberar();
+});
+
+document.querySelector("#sair").addEventListener("click", () => {
+  try { localStorage.removeItem(CHAVE_ACESSO); sessionStorage.removeItem(CHAVE_ACESSO); } catch (e) {}
+  location.reload();
+});
+
+/* ---------- Início (só depois do login) ---------- */
+let iniciado = false;
+async function iniciar() {
+  if (iniciado) return;
+  iniciado = true;
   await carregarModelos();
   const pedido = lerPedidoDoLink();
   // O link fica no endereço: abrir o mesmo link de novo volta para o mesmo orçamento,
@@ -533,4 +592,7 @@ window.addEventListener("hashchange", () => { if (lerPedidoDoLink()) location.re
   if (!form.consideracoes.value) form.consideracoes.value = CONSIDERACOES_PADRAO;
   if (!form.data.value) form.data.value = hoje();
   atualizar();
-})();
+}
+
+if (acessoSalvo()) liberar();
+else formLogin.usuario.focus();
