@@ -541,6 +541,16 @@ section[id] { scroll-margin-top: calc(var(--header-h) + 8px); }
   font-weight: 600;
   color: var(--azul);
 }
+.sim__opcional {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: -4px 0 18px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.sim__opcional[hidden] { display: none; }
+.sim__opcional input { width: 20px; height: 20px; accent-color: var(--azul); }
 .sim__extras {
   margin-bottom: 18px;
   border: 1.5px dashed var(--borda);
