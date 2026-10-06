@@ -87,6 +87,8 @@ async function carregarModelos() {
   } catch (e) {
     console.warn("Não foi possível ler os modelos do site", e);
   }
+  // Toldo: só no cálculo interno (não aparece no site). Tecido por m² + acessórios por peça
+  MODELOS.push({ nome: "Toldo vertical (tela screen 5%)", grupo: "Toldos", preco: 500, calculo: "", alturamax: 2.8, acessorios: 600 });
   MODELOS.push({ nome: "Kit instalação", grupo: "Outros (valor fixo)", preco: 0, fixo: true });
   MODELOS.push({ nome: "Serviço / outro item", grupo: "Outros (valor fixo)", preco: 0, fixo: true });
 }
