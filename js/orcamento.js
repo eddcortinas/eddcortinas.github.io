@@ -82,13 +82,12 @@ async function carregarModelos() {
         calculo: op.dataset.calculo || "",
         alturamax: parseFloat(op.dataset.alturamax) || 2.8,
         acessorios: parseFloat(op.dataset.acessorios) || 0,
+        acessoriosNome: op.dataset.acessoriosNome || "acessórios",
       });
     });
   } catch (e) {
     console.warn("Não foi possível ler os modelos do site", e);
   }
-  // Toldo: só no cálculo interno (não aparece no site). Tecido por m² + acessórios por peça
-  MODELOS.push({ nome: "Toldo vertical (tela screen 5%)", grupo: "Toldos", preco: 500, calculo: "", alturamax: 2.8, acessorios: 600 });
   MODELOS.push({ nome: "Kit instalação", grupo: "Outros (valor fixo)", preco: 0, fixo: true });
   MODELOS.push({ nome: "Serviço / outro item", grupo: "Outros (valor fixo)", preco: 0, fixo: true });
 }
@@ -136,7 +135,7 @@ function calcularItem(dados) {
   const total = cobrada * preco * qtd + (m.acessorios || 0) * qtd;
 
   const partes = [`${numero.format(cobrada)} ${un} x ${reais.format(preco)}`];
-  if (m.acessorios) partes.push(`+ acessórios ${reais.format(m.acessorios)}`);
+  if (m.acessorios) partes.push(`+ ${m.acessoriosNome || "acessórios"} ${reais.format(m.acessorios)}`);
   if (qtd > 1) partes.push(`x ${qtd} peças`);
   if (extra) partes.push(`(${extra})`);
   if (minimo) partes.push(`- área mínima (real ${numero.format(real)} ${un})`);

@@ -217,11 +217,8 @@ function calcularSimulacao() {
   const minimo = !!(largura && altura) && real < AREA_MINIMA;
   const cobrada = minimo ? AREA_MINIMA : real;
   const medida = cobrada * qtd;
-  // Toldo: tecido por m² + valor fixo de acessórios por peça
+  // Toldo: tecido por m² + valor fixo de acessórios por peça (entra no valor, sem mostrar a conta)
   const acessorios = opcao && opcao.dataset.acessorios ? parseFloat(opcao.dataset.acessorios) : 0;
-  if (acessorios && largura && altura) {
-    calculo = `tecido ${numero.format(cobrada)} m² x ${reais.format(preco)} + acessórios ${reais.format(acessorios)} por peça`;
-  }
   return {
     modelo: sim.modelo.value, preco, largura, altura, qtd,
     area: largura && altura ? medida : 0,
@@ -366,6 +363,15 @@ document.querySelectorAll(".product__sim").forEach((botao) => {
   });
 });
 
+// Link "Calcular no simulador" dos serviços (ex.: toldo) já escolhe o modelo
+document.querySelectorAll("[data-simular]").forEach((link) => {
+  link.addEventListener("click", () => {
+    sim.modelo.value = link.dataset.simular;
+    atualizarSimulacao();
+    setTimeout(() => sim.largura.focus({ preventScroll: true }), 600);
+  });
+});
+
 function linhasItem(s, n) {
   return [
     `*${n ? n + ". " : ""}${s.modelo}*${s.ambiente ? " – " + s.ambiente : ""}`,
@@ -373,7 +379,6 @@ function linhasItem(s, n) {
     s.unidade === "m"
       ? `Quantidade: ${s.qtd} · Tecido: ${numero.format(s.area)} m (${s.calculo})`
       : `Quantidade: ${s.qtd} · Área: ${numero.format(s.area)} m²`,
-    s.acessorios ? `Acessórios: ${reais.format(s.acessorios)} por peça` : null,
     s.minimo
       ? `Área mínima aplicada: ${numero.format(AREA_MINIMA)} ${s.unidade === "m" ? "m de tecido" : "m²"} por peça (medida real ${numero.format(s.real)})`
       : null,
