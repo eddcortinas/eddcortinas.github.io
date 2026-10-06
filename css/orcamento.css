@@ -26,6 +26,25 @@ h1, h2 { font-family: "Bricolage Grotesque", Georgia, serif; margin: 0; letter-s
   border-bottom: 1px solid var(--borda);
 }
 .topo__logo { height: 54px; width: auto; }
+.topo__sair { margin-left: auto; padding: 8px 16px; }
+
+/* Login */
+.login { display: none; min-height: 100vh; place-items: center; padding: 24px 16px; }
+body.bloqueado .login { display: grid; }
+body.bloqueado .topo, body.bloqueado .pagina { display: none; }
+.login__caixa {
+  width: 100%;
+  max-width: 360px;
+  padding: 28px 24px;
+  background: var(--branco);
+  border-radius: 16px;
+  box-shadow: 0 10px 30px -12px rgba(31, 37, 35, .18);
+}
+.login__logo { display: block; height: 64px; width: auto; margin: 0 auto 10px; }
+.login__caixa h1 { font-size: 1.25rem; color: var(--azul); text-align: center; margin-bottom: 18px; }
+.login__caixa .btn { width: 100%; margin-top: 6px; }
+.login__lembrar { flex-direction: row; align-items: center; gap: 8px; font-weight: 500; }
+.login__lembrar input { width: 18px; height: 18px; padding: 0; accent-color: var(--azul); }
 .topo h1 { font-size: 1.4rem; color: var(--azul); }
 .topo p { margin: 2px 0 0; color: var(--suave); font-size: .92rem; }
 .pagina { max-width: 1040px; margin: 0 auto; padding: 24px 16px 60px; }
