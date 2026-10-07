@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/orcamento.css?v=4">
+  <link rel="stylesheet" href="css/orcamento.css?v=6">
 </head>
 <body class="bloqueado">
   <!-- Login: a página só abre depois de entrar -->
@@ -19,7 +19,7 @@
     <form class="login__caixa" id="form-login" novalidate>
       <img src="img/logo-edd-cortinas.png" alt="EDD Cortinas" class="login__logo">
       <h1>Gerador de orçamento</h1>
-      <label>Login<input name="usuario" autocomplete="username" autocapitalize="none" required></label>
+      <label>Login ou e-mail<input name="usuario" autocomplete="username" autocapitalize="none" required></label>
       <label>Senha<input type="password" name="senha" autocomplete="current-password" required></label>
       <label class="login__lembrar"><input type="checkbox" name="lembrar" checked> Lembrar neste aparelho</label>
       <p class="erro" id="login-erro" role="alert" hidden></p>
@@ -33,16 +33,44 @@
       <h1>Gerador de orçamento</h1>
       <p>Preencha e baixe o PDF com a sua logo. Os dados ficam salvos só neste aparelho.</p>
     </div>
-    <button type="button" class="btn btn--linha topo__sair" id="sair">Sair</button>
+    <div class="topo__acoes">
+      <button type="button" class="btn btn--linha" id="abrir-acessos" hidden>Gerenciar acessos</button>
+      <button type="button" class="btn btn--linha" id="sair">Sair</button>
+    </div>
   </header>
+
+  <!-- Só para o administrador: quem pode usar o gerador -->
+  <dialog class="acessos" id="painel-acessos">
+    <div class="acessos__topo">
+      <h2>Gerenciar acessos</h2>
+      <button type="button" class="acessos__fechar" id="fechar-acessos" aria-label="Fechar">✕</button>
+    </div>
+    <p class="dica">Só entra quem estiver nesta lista. A pessoa entra com o e-mail e a senha que você definir aqui. Para trocar a senha de alguém, adicione o mesmo e-mail de novo.</p>
+    <form class="acessos__novo" id="form-acesso" novalidate>
+      <label>E-mail<input type="email" name="email" autocomplete="off" required></label>
+      <label>Senha (mín. 6)<input name="senha" autocomplete="new-password" minlength="6" required></label>
+      <button type="submit" class="btn btn--primario">Adicionar</button>
+    </form>
+    <p class="erro" id="acessos-msg" role="status" hidden></p>
+    <ul class="acessos__lista" id="lista-acessos"></ul>
+  </dialog>
 
   <main class="pagina">
     <form id="orc" novalidate>
       <!-- Dados do orçamento -->
       <section class="bloco">
-        <h2>Orçamento</h2>
+        <h2>Documento</h2>
         <div class="grade grade--4">
-          <label>Nº do orçamento<input name="numero" required></label>
+          <label>Tipo de documento
+            <select name="tipo">
+              <option>Orçamento</option>
+              <option>Pedido</option>
+            </select>
+          </label>
+          <label class="opcao-pdf"><input type="checkbox" name="ocultarMedidas"> Ocultar medidas no PDF</label>
+        </div>
+        <div class="grade grade--4">
+          <label>Nº<input name="numero" required></label>
           <label>Data<input type="date" name="data" required></label>
           <label>Previsão de entrega<input type="date" name="previsao"></label>
           <label>Vendedor<input name="vendedor" value="Edduardo Henrique"></label>
@@ -79,7 +107,7 @@
         <div class="grade grade--3">
           <label>Frete (R$)<input name="frete" inputmode="decimal" placeholder="0,00"></label>
           <label>Desconto (R$)<input name="desconto" inputmode="decimal" placeholder="0,00"></label>
-          <label>ou desconto (%)<input name="descontoPct" inputmode="decimal" placeholder="0"></label>
+          <label>Ajuste no total (%)<input name="descontoPct" maxlength="6" autocomplete="off" placeholder="-10 desconto · +10 acréscimo"></label>
         </div>
         <label>Observações<textarea name="obs" rows="2" placeholder="Ex.: desconto à vista; no cartão, juros da maquininha."></textarea></label>
         <label>Considerações gerais (uma por linha)<textarea name="consideracoes" rows="7"></textarea></label>
@@ -88,7 +116,7 @@
         <div class="resumo" aria-live="polite">
           <div><span>Subtotal</span><strong id="r-subtotal">R$ 0,00</strong></div>
           <div><span>Frete</span><strong id="r-frete">R$ 0,00</strong></div>
-          <div><span>Desconto</span><strong id="r-desconto">R$ 0,00</strong></div>
+          <div><span id="r-ajuste-rotulo">Desconto</span><strong id="r-desconto">R$ 0,00</strong></div>
           <div class="resumo__total"><span>Total</span><strong id="r-total">R$ 0,00</strong></div>
         </div>
       </section>
@@ -122,6 +150,6 @@
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js" defer></script>
-  <script src="js/orcamento.js?v=8" defer></script>
+  <script src="js/orcamento.js?v=11" defer></script>
 </body>
 </html>
