@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/orcamento.css?v=6">
+  <link rel="stylesheet" href="css/orcamento.css?v=7">
 </head>
 <body class="bloqueado">
   <!-- Login: a página só abre depois de entrar -->
@@ -68,13 +68,17 @@
             </select>
           </label>
           <label class="opcao-pdf"><input type="checkbox" name="ocultarMedidas"> Ocultar medidas no PDF</label>
+          <label class="col-2">Vendedor<input name="vendedor" value="Edduardo Henrique"></label>
         </div>
         <div class="grade grade--4">
           <label>Nº<input name="numero" required></label>
           <label>Data<input type="date" name="data" required></label>
+          <label id="campo-validade">Válido até<input type="date" name="validade"></label>
           <label>Previsão de entrega<input type="date" name="previsao"></label>
-          <label>Vendedor<input name="vendedor" value="Edduardo Henrique"></label>
         </div>
+        <!-- "1" = previsão calculada sozinha pelos prazos dos itens; vira "" se você mudar a data na mão -->
+        <input type="hidden" name="previsaoAuto" value="1">
+        <p class="dica" id="dica-prazo"></p>
       </section>
 
       <!-- Cliente -->
@@ -109,7 +113,7 @@
           <label>Desconto (R$)<input name="desconto" inputmode="decimal" placeholder="0,00"></label>
           <label>Ajuste no total (%)<input name="descontoPct" maxlength="6" autocomplete="off" placeholder="-10 desconto · +10 acréscimo"></label>
         </div>
-        <label>Observações<textarea name="obs" rows="2" placeholder="Ex.: desconto à vista; no cartão, juros da maquininha."></textarea></label>
+        <label>Observações<textarea name="obs" rows="2" placeholder="Ex.: tecido e cor a confirmar na visita."></textarea></label>
         <label>Considerações gerais (uma por linha)<textarea name="consideracoes" rows="7"></textarea></label>
         <label>Fotos do ambiente (opcional, até 2)<input type="file" name="fotos" accept="image/*" multiple></label>
 
@@ -119,6 +123,7 @@
           <div><span id="r-ajuste-rotulo">Desconto</span><strong id="r-desconto">R$ 0,00</strong></div>
           <div class="resumo__total"><span>Total</span><strong id="r-total">R$ 0,00</strong></div>
         </div>
+        <p class="resumo__pagamento" id="r-pagamento"></p>
       </section>
 
       <p class="erro" id="erro" role="alert" hidden></p>
@@ -150,6 +155,6 @@
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js" defer></script>
-  <script src="js/orcamento.js?v=11" defer></script>
+  <script src="js/orcamento.js?v=12" defer></script>
 </body>
 </html>

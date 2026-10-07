@@ -28,7 +28,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/style.css?v=25">
+  <link rel="stylesheet" href="css/style.css?v=26">
 
   <!-- Dados estruturados para o Google -->
   <script type="application/ld+json">
@@ -383,23 +383,23 @@
             <select id="sim-modelo" name="modelo" required>
               <option value="" disabled selected>Selecione o modelo</option>
               <optgroup label="Cortinas">
-                <option data-preco="156.00" data-calculo="tecido" data-alturamax="2.80">Cortina de tecido</option>
-                <option data-preco="221.90" data-calculo="tecido" data-alturamax="2.70">Cortina de tecido com blackout</option>
-                <option data-preco="234.50" data-guia="110.00">Cortina rolô</option>
-                <option data-preco="361.29">Cortina romana</option>
-                <option data-preco="190.46">Cortina painel</option>
-                <option data-preco="431.20">Cortina double vision</option>
-                <option data-preco="259.00" data-acessorios="1220.00" data-acessorios-nome="motor">Cortina motorizada</option>
+                <option data-preco="156.00" data-calculo="tecido" data-alturamax="2.80" data-prazo="10">Cortina de tecido</option>
+                <option data-preco="221.90" data-calculo="tecido" data-alturamax="2.70" data-prazo="10">Cortina de tecido com blackout</option>
+                <option data-preco="234.50" data-guia="110.00" data-prazo="5">Cortina rolô</option>
+                <option data-preco="361.29" data-prazo="12">Cortina romana</option>
+                <option data-preco="190.46" data-prazo="10">Cortina painel</option>
+                <option data-preco="431.20" data-prazo="10">Cortina double vision</option>
+                <option data-preco="259.00" data-acessorios="1220.00" data-acessorios-nome="motor" data-prazo="12">Cortina motorizada</option>
               </optgroup>
               <optgroup label="Persianas">
-                <option data-preco="169.90">Persiana vertical de tecido</option>
-                <option data-preco="234.00">Persiana vertical de PVC</option>
-                <option data-preco="242.67">Persiana horizontal 25 mm</option>
-                <option data-preco="476.26">Persiana horizontal 50 mm alumínio</option>
-                <option data-preco="1093.76">Persiana horizontal 50 mm madeira</option>
+                <option data-preco="169.90" data-prazo="5">Persiana vertical de tecido</option>
+                <option data-preco="234.00" data-prazo="5">Persiana vertical de PVC</option>
+                <option data-preco="242.67" data-prazo="5">Persiana horizontal 25 mm</option>
+                <option data-preco="476.26" data-prazo="12">Persiana horizontal 50 mm alumínio</option>
+                <option data-preco="1093.76" data-prazo="12">Persiana horizontal 50 mm madeira</option>
               </optgroup>
               <optgroup label="Toldos">
-                <option data-preco="500.00" data-acessorios="600.00">Toldo vertical (tela screen 5%)</option>
+                <option data-preco="500.00" data-acessorios="600.00" data-prazo="12">Toldo vertical (tela screen 5%)</option>
               </optgroup>
             </select>
           </div>
@@ -476,6 +476,7 @@
             </div>
           </div>
           <p class="sim__note sim__calculo" id="sim-calculo" hidden></p>
+          <p class="sim__condicoes" id="sim-condicoes" hidden></p>
           <p class="sim__note" id="sim-nota">Estimativa a partir do preço por m² (nas cortinas de tecido, pelo metro de tecido), com área mínima de 1,5 m² por peça (1,5 m de tecido nas cortinas de tecido). O valor final depende do tecido, dos acessórios e da medição feita na visita técnica.</p>
 
           <fieldset class="sim__cliente">
@@ -515,6 +516,7 @@
             <h3>Sua lista de orçamento</h3>
             <ul id="sim-itens"></ul>
             <p class="sim__total">Total estimado: <strong id="sim-total">—</strong></p>
+            <p class="sim__condicoes" id="sim-total-condicoes" hidden></p>
             <p class="sim__note">Tem mais janelas? Preencha as medidas acima e clique em "Adicionar à lista". Ao enviar, a lista inteira vai em uma única mensagem.</p>
           </div>
         </form>
@@ -803,6 +805,6 @@
     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 21l1.65-4.95A9 9 0 1 1 8 19.4L3 21z"/><g transform="translate(7.3 7.3) scale(.4)" stroke-width="4"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></g></svg>
   </a>
 
-  <script src="js/main.js?v=26" defer></script>
+  <script src="js/main.js?v=27" defer></script>
 </body>
 </html>
