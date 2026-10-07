@@ -227,39 +227,49 @@ function lerItens() {
 }
 
 function totais() {
-  const itens = lerItens().map((d) => ({ dados: d, r: calcularItem(d) }));
-  const subtotal = itens.reduce((t, i) => t + i.r.total, 0);
-  const frete = lerNumero(form.frete.value);
-  // Ajuste em % sobre o valor total: "+10" aumenta 10%, "-10" (ou só "10") dá 10% de desconto
+  // Ajuste interno: "+10" aumenta e "-10" (ou só "10") diminui o preço de cada item.
+  // Não vira linha no PDF: o cliente só vê os itens e o subtotal já ajustados.
   const ajuste = String(form.descontoPct.value).trim();
-  const pct = lerNumero(ajuste.replace(/^[+-]/, ""));
-  const base = subtotal + frete;
-  const acrescimo = pct && ajuste.startsWith("+") ? base * pct / 100 : 0;
-  const desconto = lerNumero(form.desconto.value) + (pct && !ajuste.startsWith("+") ? base * pct / 100 : 0);
-  return { itens, subtotal, frete, desconto, acrescimo, total: Math.max(0, base - desconto + acrescimo) };
+  const pctAjuste = lerNumero(ajuste.replace(/^[+-]/, ""));
+  const fator = 1 + (ajuste.startsWith("+") ? 1 : -1) * pctAjuste / 100;
+  const itens = lerItens().map((d) => {
+    const r = calcularItem(d);
+    return { dados: d, r, totalAjustado: Math.max(0, r.total * fator) };
+  });
+  const subtotalSemAjuste = itens.reduce((t, i) => t + i.r.total, 0);
+  const subtotal = itens.reduce((t, i) => t + i.totalAjustado, 0);
+  const frete = lerNumero(form.frete.value);
+  // Desconto que aparece no PDF: em % (sobre o subtotal) ou em R$
+  const valorDesconto = lerNumero(form.desconto.value);
+  const descontoEmPct = form.descontoTipo.value === "%";
+  const desconto = Math.min(subtotal, descontoEmPct ? subtotal * valorDesconto / 100 : valorDesconto);
+  return {
+    itens, subtotal, frete, desconto,
+    descontoPct: descontoEmPct && valorDesconto ? valorDesconto : 0,
+    ajusteInterno: subtotal - subtotalSemAjuste,
+    total: Math.max(0, subtotal + frete - desconto),
+  };
 }
 
 function atualizar() {
   const t = totais();
   [...listaItens.querySelectorAll(".item")].forEach((el, i) => {
-    const r = t.itens[i].r;
-    el.querySelector('[data-campo="total"]').textContent = reais.format(r.total);
-    el.querySelector('[data-campo="calc"]').textContent = r.calc;
+    const { r, totalAjustado } = t.itens[i];
+    // Valor do item = o que vai para o PDF (já com o ajuste interno)
+    el.querySelector('[data-campo="total"]').textContent = reais.format(totalAjustado);
+    el.querySelector('[data-campo="calc"]').textContent = r.calc +
+      (t.ajusteInterno && r.total ? ` · sem ajuste: ${reais.format(r.total)}` : "");
     const m = MODELOS[t.itens[i].dados.modelo];
     el.querySelector('[data-campo="unitario"]').placeholder = m && !m.fixo ? `${reais.format(m.preco)} (auto)` : "valor";
   });
   document.querySelector("#r-subtotal").textContent = reais.format(t.subtotal);
   document.querySelector("#r-frete").textContent = reais.format(t.frete);
-  // Caixa do resumo: mostra desconto, acréscimo, ou o saldo quando houver os dois
-  let rotulo = "Desconto", valor = reais.format(t.desconto);
-  if (t.acrescimo && !t.desconto) { rotulo = "Acréscimo"; valor = `+ ${reais.format(t.acrescimo)}`; }
-  else if (t.acrescimo && t.desconto) {
-    const saldo = t.acrescimo - t.desconto;
-    rotulo = "Ajuste";
-    valor = `${saldo < 0 ? "- " : "+ "}${reais.format(Math.abs(saldo))}`;
-  }
-  document.querySelector("#r-ajuste-rotulo").textContent = rotulo;
-  document.querySelector("#r-desconto").textContent = valor;
+  document.querySelector("#r-desconto-rotulo").textContent = t.descontoPct ? `Desconto (${numero.format(t.descontoPct).replace(",00", "")}%)` : "Desconto";
+  document.querySelector("#r-desconto").textContent = reais.format(t.desconto);
+  // Só para você: quanto o ajuste interno mexeu no valor (não vai para o PDF)
+  document.querySelector("#dica-ajuste").textContent = t.ajusteInterno
+    ? `Ajuste interno: ${t.ajusteInterno > 0 ? "+" : "-"} ${reais.format(Math.abs(t.ajusteInterno))} já embutido no preço dos itens e no subtotal. Não aparece no PDF.`
+    : "O ajuste interno entra no preço de cada item e não aparece no PDF.";
   document.querySelector("#r-total").textContent = reais.format(t.total);
   atualizarDatas(t);
   const p = condicoesPagamento(t.total);
@@ -445,10 +455,11 @@ async function gerarPDF() {
   doc.setLineWidth(0.6); doc.line(M, yi + 20, W - M, yi + 20);
 
   // Tabela de itens
-  const linhas = t.itens.filter((i) => MODELOS[i.dados.modelo]).map(({ dados, r }) => {
+  const linhas = t.itens.filter((i) => MODELOS[i.dados.modelo]).map(({ dados, r, totalAjustado }) => {
     const m = MODELOS[dados.modelo];
     const desc = [m.nome.toUpperCase(), m.guia && dados.guia && "Com guia", dados.descricao, !ocultarMedidas && r.medida].filter(Boolean).join("\n");
-    return [txt(dados.ambiente || "-"), txt(desc), String(r.qtd || 1), txt(reais.format(r.total))];
+    // Preço já com o ajuste interno embutido
+    return [txt(dados.ambiente || "-"), txt(desc), String(r.qtd || 1), txt(reais.format(totalAjustado))];
   });
   doc.autoTable({
     startY: yi + 25,
@@ -476,9 +487,9 @@ async function gerarPDF() {
   doc.text(obs, M, yt + 5);
 
   const xr = W - M;
-  const linhasTotais = [["SUBTOTAL", t.subtotal], ["FRETE", t.frete]];
-  if (t.desconto || !t.acrescimo) linhasTotais.push(["DESCONTO", t.desconto]);
-  if (t.acrescimo) linhasTotais.push(["ACRÉSCIMO", t.acrescimo]);
+  // O ajuste interno já está nos itens e no subtotal; aqui só o desconto visível
+  const rotuloDesconto = t.descontoPct ? `DESCONTO (${numero.format(t.descontoPct).replace(",00", "")}%)` : "DESCONTO";
+  const linhasTotais = [["SUBTOTAL", t.subtotal], ["FRETE", t.frete], [rotuloDesconto, t.desconto]];
   linhasTotais.forEach(([r, v], i) => {
     doc.setFont("helvetica", "normal"); doc.setFontSize(8.5);
     doc.text(`${r}  ${txt(reais.format(v))}`, xr, yt + i * 5.5, { align: "right" });
@@ -775,6 +786,8 @@ async function iniciar() {
       if (c.type === "checkbox") c.checked = v === true;
       else c.value = v;
     });
+    // Rascunho de antes do desconto em %: o desconto dele era em R$
+    if (!("descontoTipo" in r.campos)) form.descontoTipo.value = "R$";
     (r.itens && r.itens.length ? r.itens : [{}]).forEach(({ nome, ...d }) => {
       if (nome) { const i = MODELOS.findIndex((m) => m.nome === nome); d.modelo = i >= 0 ? String(i) : ""; }
       adicionarItem(d);
