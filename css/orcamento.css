@@ -145,6 +145,10 @@ textarea { resize: vertical; }
 .resumo__pagamento { margin: 10px 0 0; padding: 10px 14px; border-radius: 12px; background: var(--azul-claro); color: var(--azul); font-weight: 600; font-size: .92rem; }
 .resumo__pagamento:empty { display: none; }
 label[hidden] { display: none; }
+.campo-unidade { display: flex; gap: 6px; }
+.campo-unidade input { flex: 1; min-width: 0; }
+.campo-unidade select { width: auto; flex: 0 0 auto; padding-right: 6px; }
+#dica-ajuste { margin: 6px 0 12px; }
 #dica-prazo { margin: 8px 0 0; }
 #dica-prazo:empty { display: none; }
 .acoes { display: flex; justify-content: flex-end; gap: 12px; }
