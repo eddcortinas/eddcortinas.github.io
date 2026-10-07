@@ -199,9 +199,13 @@ function totais() {
   const itens = lerItens().map((d) => ({ dados: d, r: calcularItem(d) }));
   const subtotal = itens.reduce((t, i) => t + i.r.total, 0);
   const frete = lerNumero(form.frete.value);
-  const pct = lerNumero(form.descontoPct.value);
-  const desconto = lerNumero(form.desconto.value) || (pct ? subtotal * pct / 100 : 0);
-  return { itens, subtotal, frete, desconto, total: Math.max(0, subtotal + frete - desconto) };
+  // Ajuste em % sobre o valor total: "+10" aumenta 10%, "-10" (ou só "10") dá 10% de desconto
+  const ajuste = String(form.descontoPct.value).trim();
+  const pct = lerNumero(ajuste.replace(/^[+-]/, ""));
+  const base = subtotal + frete;
+  const acrescimo = pct && ajuste.startsWith("+") ? base * pct / 100 : 0;
+  const desconto = lerNumero(form.desconto.value) + (pct && !ajuste.startsWith("+") ? base * pct / 100 : 0);
+  return { itens, subtotal, frete, desconto, acrescimo, total: Math.max(0, base - desconto + acrescimo) };
 }
 
 function atualizar() {
@@ -215,7 +219,16 @@ function atualizar() {
   });
   document.querySelector("#r-subtotal").textContent = reais.format(t.subtotal);
   document.querySelector("#r-frete").textContent = reais.format(t.frete);
-  document.querySelector("#r-desconto").textContent = reais.format(t.desconto);
+  // Caixa do resumo: mostra desconto, acréscimo, ou o saldo quando houver os dois
+  let rotulo = "Desconto", valor = reais.format(t.desconto);
+  if (t.acrescimo && !t.desconto) { rotulo = "Acréscimo"; valor = `+ ${reais.format(t.acrescimo)}`; }
+  else if (t.acrescimo && t.desconto) {
+    const saldo = t.acrescimo - t.desconto;
+    rotulo = "Ajuste";
+    valor = `${saldo < 0 ? "- " : "+ "}${reais.format(Math.abs(saldo))}`;
+  }
+  document.querySelector("#r-ajuste-rotulo").textContent = rotulo;
+  document.querySelector("#r-desconto").textContent = valor;
   document.querySelector("#r-total").textContent = reais.format(t.total);
   salvarRascunho();
 }
@@ -224,7 +237,9 @@ function atualizar() {
 function salvarRascunho() {
   try {
     const campos = {};
-    [...form.elements].forEach((c) => { if (c.name && c.type !== "file") campos[c.name] = c.value; });
+    [...form.elements].forEach((c) => {
+      if (c.name && c.type !== "file") campos[c.name] = c.type === "checkbox" ? c.checked : c.value;
+    });
     // Guarda também o nome do modelo, para o rascunho não trocar de modelo se a lista mudar
     const itens = lerItens().map((d) => ({ ...d, nome: MODELOS[d.modelo] ? MODELOS[d.modelo].nome : "" }));
     localStorage.setItem(chaveRascunho, JSON.stringify({ campos, itens }));
@@ -258,7 +273,16 @@ form.cep.addEventListener("input", () => {
   const d = form.cep.value.replace(/\D/g, "").slice(0, 8);
   form.cep.value = d.length > 5 ? `${d.slice(0, 5)}-${d.slice(5)}` : d;
 });
-["frete", "desconto", "descontoPct"].forEach((n) => form[n].addEventListener("input", () => soNumerosDecimal(form[n])));
+["frete", "desconto"].forEach((n) => form[n].addEventListener("input", () => soNumerosDecimal(form[n])));
+// Ajuste (%): aceita um sinal + ou - no começo e depois só números
+form.descontoPct.addEventListener("input", () => {
+  const c = form.descontoPct;
+  const sinal = (c.value.trim().match(/^[+-]/) || [""])[0];
+  const resto = { value: c.value.replace(/^\s*[+-]/, "") };
+  soNumerosDecimal(resto);
+  const v = sinal + resto.value;
+  if (v !== c.value) c.value = v;
+});
 
 form.addEventListener("input", atualizar);
 form.addEventListener("change", atualizar);
@@ -305,11 +329,13 @@ async function gerarPDF() {
   const W = 210, M = 14, AZUL = [11, 29, 84], LARANJA = [247, 137, 58], CINZA = [90, 96, 94];
   const t = totais();
   const f = form;
+  const tipo = f.tipo.value || "Orçamento"; // "Orçamento" ou "Pedido"
+  const ocultarMedidas = f.ocultarMedidas.checked;
 
   // Cabeçalho
   doc.setFont("helvetica", "bold"); doc.setFontSize(9); doc.setTextColor(...AZUL);
-  doc.text("ORÇAMENTO", M, 13);
-  doc.setDrawColor(...AZUL); doc.setLineWidth(0.4); doc.line(M + 24, 12, W - M, 12);
+  doc.text(tipo.toUpperCase(), M, 13);
+  doc.setDrawColor(...AZUL); doc.setLineWidth(0.4); doc.line(M + doc.getTextWidth(tipo.toUpperCase()) + 4, 12, W - M, 12);
 
   try {
     const logo = await imagemParaDataURL(EMPRESA.logo, 480, "image/png");
@@ -341,7 +367,7 @@ async function gerarPDF() {
   doc.setDrawColor(...AZUL); doc.setLineWidth(0.6); doc.line(M, yi, W - M, yi);
   const colW = (W - 2 * M) / 4;
   const info = [
-    ["Nº do Orçamento", f.numero.value || "-"],
+    [`Nº do ${tipo}`, f.numero.value || "-"],
     ["Data", dataBR(f.data.value)],
     ["Previsão de Entrega", dataBR(f.previsao.value) || "A combinar"],
     ["Valor Total", numero.format(t.total)],
@@ -359,7 +385,7 @@ async function gerarPDF() {
   // Tabela de itens
   const linhas = t.itens.filter((i) => MODELOS[i.dados.modelo]).map(({ dados, r }) => {
     const m = MODELOS[dados.modelo];
-    const desc = [m.nome.toUpperCase(), m.guia && dados.guia && "Com guia", dados.descricao, r.medida].filter(Boolean).join("\n");
+    const desc = [m.nome.toUpperCase(), m.guia && dados.guia && "Com guia", dados.descricao, !ocultarMedidas && r.medida].filter(Boolean).join("\n");
     return [txt(dados.ambiente || "-"), txt(desc), String(r.qtd || 1), txt(reais.format(r.total))];
   });
   doc.autoTable({
@@ -388,7 +414,9 @@ async function gerarPDF() {
   doc.text(obs, M, yt + 5);
 
   const xr = W - M;
-  const linhasTotais = [["SUBTOTAL", t.subtotal], ["FRETE", t.frete], ["DESCONTO", t.desconto]];
+  const linhasTotais = [["SUBTOTAL", t.subtotal], ["FRETE", t.frete]];
+  if (t.desconto || !t.acrescimo) linhasTotais.push(["DESCONTO", t.desconto]);
+  if (t.acrescimo) linhasTotais.push(["ACRÉSCIMO", t.acrescimo]);
   linhasTotais.forEach(([r, v], i) => {
     doc.setFont("helvetica", "normal"); doc.setFontSize(8.5);
     doc.text(`${r}  ${txt(reais.format(v))}`, xr, yt + i * 5.5, { align: "right" });
@@ -440,10 +468,10 @@ async function gerarPDF() {
     doc.setDrawColor(...LARANJA); doc.setLineWidth(0.8); doc.line(M, 287, W - M, 287);
     doc.setFont("helvetica", "normal"); doc.setFontSize(7.5); doc.setTextColor(...CINZA);
     doc.text(txt(`${EMPRESA.nome} - ${EMPRESA.site} - (85) 9 8733-4369`), M, 291.5);
-    doc.text(`Orçamento Nº ${txt(f.numero.value)} - Pág. ${p}/${paginas}`, W - M, 291.5, { align: "right" });
+    doc.text(`${tipo} Nº ${txt(f.numero.value)} - Pág. ${p}/${paginas}`, W - M, 291.5, { align: "right" });
   }
 
-  const nomeArquivo = `Orcamento ${f.numero.value || ""} - ${f.cliente.value || "cliente"}`.replace(/[\\/:*?"<>|]/g, "").trim();
+  const nomeArquivo = `${tipo === "Pedido" ? "Pedido" : "Orcamento"} ${f.numero.value || ""} - ${f.cliente.value || "cliente"}`.replace(/[\\/:*?"<>|]/g, "").trim();
   doc.save(`${nomeArquivo}.pdf`);
   try { localStorage.setItem(CHAVE_ULTIMO, String(parseInt(f.numero.value, 10) || "")); } catch (e) {}
 }
@@ -503,36 +531,52 @@ function carregarPedido(pedido) {
     });
   });
   if (!pedido.length) adicionarItem();
+  // Dados que o cliente preencheu no simulador (vêm no 1º item do link)
+  const c = pedido[0] || {};
+  if (c.cn) form.cliente.value = c.cn;
+  if (c.cb) form.bairro.value = c.cb;
+  if (c.co) form.obs.value = `Como conheceu: ${c.co}`;
 }
 
 // Abrir outro link com esta página já aberta: recarrega para carregar o pedido certo
 window.addEventListener("hashchange", () => { if (lerPedidoDoLink()) location.reload(); });
 
 /* ---------- Login ----------
-   Site estático: o login é conferido no navegador. Aqui só fica um código gerado
-   a partir da senha (PBKDF2), nunca a senha em si. */
-const ACESSO = {
-  usuario: "edduardo",
-  codigo: "851a360e0241da9ae68e0dbaa9e4a43864027f8ad2fb2bea4b902b4e99bd186b",
-};
+   Login e senha são conferidos no servidor de acessos (Cloudflare Worker).
+   Nada da senha fica no site. "edduardo" é o administrador. */
+const API_ACESSOS = (() => {
+  // Só na prévia local dá para apontar para outro servidor (testes)
+  try { if (location.hostname === "localhost" && localStorage.getItem("edd-api")) return localStorage.getItem("edd-api"); } catch (e) {}
+  return "https://edd-acessos.eddcortinas.workers.dev";
+})();
 const CHAVE_ACESSO = "edd-orcamento-acesso";
 const formLogin = document.querySelector("#form-login");
 const loginErro = document.querySelector("#login-erro");
+const botaoAcessos = document.querySelector("#abrir-acessos");
 
-async function codigoDaSenha(usuario, senha) {
-  const enc = new TextEncoder();
-  const chave = await crypto.subtle.importKey("raw", enc.encode(senha), "PBKDF2", false, ["deriveBits"]);
-  const bits = await crypto.subtle.deriveBits(
-    { name: "PBKDF2", hash: "SHA-256", salt: enc.encode(`edd-cortinas:${usuario}`), iterations: 150000 },
-    chave, 256
-  );
-  return [...new Uint8Array(bits)].map((b) => b.toString(16).padStart(2, "0")).join("");
+function lerAcesso() {
+  try { return localStorage.getItem(CHAVE_ACESSO) || sessionStorage.getItem(CHAVE_ACESSO) || ""; } catch (e) { return ""; }
 }
-function acessoSalvo() {
-  try { return (localStorage.getItem(CHAVE_ACESSO) || sessionStorage.getItem(CHAVE_ACESSO)) === ACESSO.codigo; } catch (e) { return false; }
+function apagarAcesso() {
+  try { localStorage.removeItem(CHAVE_ACESSO); sessionStorage.removeItem(CHAVE_ACESSO); } catch (e) {}
 }
-function liberar() {
+async function api(metodo, rota, corpo) {
+  const acesso = lerAcesso();
+  const r = await fetch(API_ACESSOS + rota, {
+    method: metodo,
+    headers: { "Content-Type": "application/json", ...(acesso ? { Authorization: `Bearer ${acesso}` } : {}) },
+    body: corpo ? JSON.stringify(corpo) : undefined,
+  });
+  const dados = await r.json().catch(() => ({}));
+  return { ...dados, ok: r.ok, status: r.status };
+}
+function mostrarErroLogin(texto) {
+  loginErro.textContent = texto;
+  loginErro.hidden = false;
+}
+function liberar(adm) {
   document.body.classList.remove("bloqueado");
+  botaoAcessos.hidden = !adm;
   iniciar();
 }
 
@@ -540,28 +584,103 @@ formLogin.addEventListener("submit", async (e) => {
   e.preventDefault();
   loginErro.hidden = true;
   const usuario = formLogin.usuario.value.trim().toLowerCase();
-  const senha = formLogin.senha.value;
+  // Tira espaços que o teclado do celular às vezes coloca no fim
+  const senha = formLogin.senha.value.trim();
+  if (!usuario || !senha) return mostrarErroLogin("Informe login e senha.");
   const botao = formLogin.querySelector("button");
   botao.disabled = true;
-  const ok = usuario === ACESSO.usuario && (await codigoDaSenha(usuario, senha)) === ACESSO.codigo;
+  let r = null;
+  try { r = await api("POST", "/login", { usuario, senha }); } catch (err) {}
   botao.disabled = false;
-  if (!ok) {
-    loginErro.textContent = "Login ou senha incorretos.";
-    loginErro.hidden = false;
+  if (!r) return mostrarErroLogin("Sem conexão com o servidor. Confira a internet e tente de novo.");
+  if (!r.ok) {
     formLogin.senha.value = "";
     formLogin.senha.focus();
-    return;
+    return mostrarErroLogin(r.erro || "Login ou senha incorretos.");
   }
-  try {
-    (formLogin.lembrar.checked ? localStorage : sessionStorage).setItem(CHAVE_ACESSO, ACESSO.codigo);
-  } catch (err) {}
+  try { (formLogin.lembrar.checked ? localStorage : sessionStorage).setItem(CHAVE_ACESSO, r.acesso); } catch (err) {}
   formLogin.reset();
-  liberar();
+  liberar(r.adm);
 });
 
 document.querySelector("#sair").addEventListener("click", () => {
-  try { localStorage.removeItem(CHAVE_ACESSO); sessionStorage.removeItem(CHAVE_ACESSO); } catch (e) {}
+  apagarAcesso();
   location.reload();
+});
+
+/* ---------- Gerenciar acessos (só administrador) ---------- */
+const painel = document.querySelector("#painel-acessos");
+const formAcesso = document.querySelector("#form-acesso");
+const listaAcessos = document.querySelector("#lista-acessos");
+const msgAcessos = document.querySelector("#acessos-msg");
+
+function avisoAcessos(texto, ok) {
+  msgAcessos.textContent = texto;
+  msgAcessos.style.color = ok ? "#1f6b33" : "";
+  msgAcessos.hidden = !texto;
+}
+function botaoLinha(texto, acao) {
+  const b = document.createElement("button");
+  b.type = "button";
+  b.className = "btn btn--linha";
+  b.textContent = texto;
+  b.addEventListener("click", async () => { b.disabled = true; await acao(); });
+  return b;
+}
+async function carregarAcessos() {
+  listaAcessos.innerHTML = '<li class="vazio">Carregando...</li>';
+  const r = await api("GET", "/usuarios").catch(() => ({ ok: false, erro: "Sem conexão com o servidor." }));
+  listaAcessos.innerHTML = "";
+  if (!r.ok) return avisoAcessos(r.erro || "Não foi possível carregar a lista.");
+  if (!r.usuarios.length) {
+    listaAcessos.innerHTML = '<li class="vazio">Ninguém adicionado ainda. Só você (edduardo) tem acesso.</li>';
+    return;
+  }
+  r.usuarios.forEach((u) => {
+    const li = document.createElement("li");
+    const email = document.createElement("span");
+    email.className = "email";
+    email.textContent = u.email;
+    const status = document.createElement("span");
+    status.className = `status${u.ativo ? "" : " status--bloq"}`;
+    status.textContent = u.ativo ? "Liberado" : "Bloqueado";
+    const alternar = botaoLinha(u.ativo ? "Bloquear" : "Desbloquear", async () => {
+      const res = await api("POST", "/usuarios/status", { email: u.email, ativo: !u.ativo }).catch(() => ({ ok: false }));
+      avisoAcessos(res.ok ? `${u.email} ${u.ativo ? "bloqueado" : "desbloqueado"}.` : res.erro || "Não deu certo, tente de novo.", res.ok);
+      carregarAcessos();
+    });
+    const remover = botaoLinha("Remover", async () => {
+      if (!confirm(`Remover ${u.email}? A pessoa perde o acesso.`)) return carregarAcessos();
+      const res = await api("POST", "/usuarios/remover", { email: u.email }).catch(() => ({ ok: false }));
+      avisoAcessos(res.ok ? `${u.email} removido.` : res.erro || "Não deu certo, tente de novo.", res.ok);
+      carregarAcessos();
+    });
+    li.append(email, status, alternar, remover);
+    listaAcessos.appendChild(li);
+  });
+}
+
+botaoAcessos.addEventListener("click", () => {
+  avisoAcessos("");
+  painel.showModal();
+  carregarAcessos();
+});
+document.querySelector("#fechar-acessos").addEventListener("click", () => painel.close());
+
+formAcesso.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const email = formAcesso.email.value.trim().toLowerCase();
+  const senha = formAcesso.senha.value.trim();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return avisoAcessos("Digite um e-mail válido.");
+  if (senha.length < 6) return avisoAcessos("A senha precisa ter pelo menos 6 caracteres.");
+  const botao = formAcesso.querySelector("button");
+  botao.disabled = true;
+  const res = await api("POST", "/usuarios", { email, senha }).catch(() => ({ ok: false, erro: "Sem conexão com o servidor." }));
+  botao.disabled = false;
+  if (!res.ok) return avisoAcessos(res.erro || "Não deu certo, tente de novo.");
+  avisoAcessos(res.atualizado ? `Senha de ${email} atualizada.` : `${email} adicionado. Passe o e-mail e a senha para a pessoa.`, true);
+  formAcesso.reset();
+  carregarAcessos();
 });
 
 /* ---------- Início (só depois do login) ---------- */
@@ -581,7 +700,12 @@ async function iniciar() {
     erro.style.color = "#0B1D54";
     erro.hidden = false;
   } else if (r && r.campos) {
-    Object.entries(r.campos).forEach(([k, v]) => { if (form[k] && form[k].type !== "file") form[k].value = v; });
+    Object.entries(r.campos).forEach(([k, v]) => {
+      const c = form[k];
+      if (!c || c.type === "file") return;
+      if (c.type === "checkbox") c.checked = v === true;
+      else c.value = v;
+    });
     (r.itens && r.itens.length ? r.itens : [{}]).forEach(({ nome, ...d }) => {
       if (nome) { const i = MODELOS.findIndex((m) => m.nome === nome); d.modelo = i >= 0 ? String(i) : ""; }
       adicionarItem(d);
@@ -594,5 +718,13 @@ async function iniciar() {
   atualizar();
 }
 
-if (acessoSalvo()) liberar();
-else formLogin.usuario.focus();
+// Já entrou antes neste aparelho? Confirma com o servidor (vale bloqueio na hora)
+(async () => {
+  if (!lerAcesso()) return formLogin.usuario.focus();
+  const r = await api("GET", "/eu").catch(() => null);
+  if (r && r.ok) return liberar(r.adm);
+  apagarAcesso();
+  if (!r) mostrarErroLogin("Sem conexão com o servidor. Confira a internet e tente de novo.");
+  else if (r.status === 401) mostrarErroLogin("Entre novamente.");
+  formLogin.usuario.focus();
+})();

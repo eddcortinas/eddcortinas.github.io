@@ -409,15 +409,22 @@ sim.addEventListener("submit", (e) => {
 
   const blocos = itens.map((s, i) => linhasItem(s, itens.length > 1 ? i + 1 : 0).join("\n"));
   const soma = itens.reduce((t, s) => t + (s.preco ? s.valor : 0), 0);
+  const cliente = { nome: sim.cliente.value.trim(), bairro: sim.bairro.value.trim(), origem: sim.origem.value };
+  const linhasCliente = [
+    cliente.nome && `*Nome:* ${cliente.nome}`,
+    cliente.bairro && `*Bairro:* ${cliente.bairro}`,
+    cliente.origem && `*Como conheceu:* ${cliente.origem}`,
+  ].filter(Boolean);
   const texto = [
     "Olá, EDD Cortinas! Fiz uma simulação no site:",
     "",
+    ...(linhasCliente.length ? [...linhasCliente, ""] : []),
     blocos.join("\n\n"),
     itens.length > 1 && soma ? `\n*Total estimado:* ${reais.format(soma)}${itens.some((s) => !s.preco) ? " + itens sob consulta" : ""}` : null,
     "",
     "Gostaria de confirmar o orçamento e agendar uma visita técnica.",
     "",
-    `Link do pedido (para a EDD montar o orçamento): ${linkOrcamento(itens)}`,
+    `Link do pedido (para a EDD montar o orçamento): ${linkOrcamento(itens, cliente)}`,
   ]
     .filter((linha) => linha !== null)
     .join("\n");
@@ -429,13 +436,20 @@ sim.addEventListener("submit", (e) => {
   salvarLista();
   renderLista();
   sim.guia.checked = false;
+  sim.cliente.value = "";
+  sim.bairro.value = "";
+  sim.origem.value = "";
   limparMedidas();
 });
 
 /* Link que abre a página de orçamento (orcamento.html) já preenchida com os itens.
    Os dados vão dentro do próprio link (depois do #), nada fica salvo em servidor. */
-function linkOrcamento(itens) {
-  const dados = itens.map((s) => ({
+function linkOrcamento(itens, cliente = {}) {
+  const dados = itens.map((s, i) => ({
+    // Dados do cliente vão no 1º item (assim links antigos e novos continuam abrindo)
+    ...(i === 0 && cliente.nome ? { cn: cliente.nome } : {}),
+    ...(i === 0 && cliente.bairro ? { cb: cliente.bairro } : {}),
+    ...(i === 0 && cliente.origem ? { co: cliente.origem } : {}),
     m: s.modelo,
     a: s.ambiente || "",
     l: s.largura,
