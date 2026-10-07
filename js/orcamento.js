@@ -13,7 +13,7 @@ const EMPRESA = {
     "CNPJ 72.170.673/0001-09",
   ],
   site: "eddcortinas.com.br",
-  logo: "img/logo-edd-cortinas.png",
+  logo: "img/logo-edd-cortinas-sem-sombra.png",
 };
 
 const CONSIDERACOES_PADRAO = [
@@ -420,16 +420,20 @@ async function gerarPDF() {
   EMPRESA.linhas.forEach((l) => { doc.text(txt(l), M, y); y += ENTRELINHA; });
   if (f.vendedor.value) { doc.text(txt(`Vendedor: ${f.vendedor.value}`), M, y); y += ENTRELINHA; }
 
-  // Cliente (à direita), alinhado com os dados da EDD
+  // Cliente: encostado no canto direito, nas mesmas linhas dos dados da EDD
+  const XD = W - M, LARG_C = 85;
   doc.setFont("helvetica", "bold"); doc.setFontSize(8); doc.setTextColor(...AZUL);
-  doc.text("CLIENTE", W - M, Y_NOME - 5, { align: "right" });
+  doc.text("CLIENTE", XD, Y_NOME - 5, { align: "right" });
   doc.setTextColor(30, 37, 35); doc.setFontSize(9.5);
-  doc.text(txt(f.cliente.value), W - M, Y_NOME, { align: "right", maxWidth: 85 });
+  doc.text(txt(f.cliente.value), XD, Y_NOME, { align: "right", maxWidth: LARG_C });
   doc.setFont("helvetica", "normal"); doc.setFontSize(8.5);
   let yc = Y_LINHAS;
   [f.documento.value && `CPF/CNPJ: ${f.documento.value}`, f.endereco.value, [f.bairro.value, f.cidade.value].filter(Boolean).join(" - "),
     f.cep.value && `CEP ${f.cep.value}`, f.telefone.value && `Tel.: ${f.telefone.value}`]
-    .filter(Boolean).forEach((l) => { doc.text(txt(l), W - M, yc, { align: "right", maxWidth: 85 }); yc += ENTRELINHA; });
+    .filter(Boolean).forEach((l) => {
+      // Linha longa (ex.: endereço) quebra em mais de uma, sem invadir a margem
+      doc.splitTextToSize(txt(l), LARG_C).forEach((parte) => { doc.text(parte, XD, yc, { align: "right" }); yc += ENTRELINHA; });
+    });
 
   // Faixa de informações
   const yi = Math.max(y, yc) + 6;
@@ -479,14 +483,21 @@ async function gerarPDF() {
     },
   });
 
-  // Observações e totais
+  // Forma de pagamento e observações (à esquerda) e totais (à direita)
   let yt = doc.lastAutoTable.finalY + 8;
   if (yt > 240) { doc.addPage(); yt = 20; }
+  const pg = condicoesPagamento(t.total);
   doc.setFont("helvetica", "bold"); doc.setFontSize(8.5); doc.setTextColor(30, 37, 35);
-  doc.text("OBS:", M, yt);
+  doc.text("FORMA DE PAGAMENTO:", M, yt);
+  doc.setFont("helvetica", "normal");
+  doc.text(txt(`À vista: ${reais.format(pg.avista)} (${PAGAMENTO.descontoAvista}% de desconto)`), M, yt + 5);
+  doc.text(txt(`Cartão: ${PAGAMENTO.parcelas}x de ${reais.format(pg.parcela)} sem juros`), M, yt + 9.5);
+  const yObs = yt + 17;
+  doc.setFont("helvetica", "bold");
+  doc.text("OBS:", M, yObs);
   doc.setFont("helvetica", "normal");
   const obs = doc.splitTextToSize(txt(f.obs.value || "-"), 105);
-  doc.text(obs, M, yt + 5);
+  doc.text(obs, M, yObs + 5);
 
   const xr = W - M;
   // O ajuste interno já está nos itens e no subtotal; aqui só o desconto visível
@@ -501,15 +512,8 @@ async function gerarPDF() {
   doc.setFont("helvetica", "bold"); doc.setFontSize(11); doc.setTextColor(...AZUL);
   doc.text(`TOTAL  ${txt(reais.format(t.total))}`, xr, yTot + 1.5, { align: "right" });
 
-  // Condições de pagamento, logo abaixo do total
-  const pg = condicoesPagamento(t.total);
-  doc.setFont("helvetica", "normal"); doc.setFontSize(8.5); doc.setTextColor(30, 37, 35);
-  doc.text(txt(`À vista: ${reais.format(pg.avista)} (${PAGAMENTO.descontoAvista}% de desconto)`), xr, yTot + 7.5, { align: "right" });
-  doc.text(txt(`Cartão: ${PAGAMENTO.parcelas}x de ${reais.format(pg.parcela)} sem juros`), xr, yTot + 12, { align: "right" });
-  const yFimTotais = yTot + 12;
-
-  // Considerações gerais
-  let yg = Math.max(yt + 5 + obs.length * 4, yFimTotais + 6) + 6;
+  // Considerações gerais (abaixo do que terminar por último: observações ou total)
+  let yg = Math.max(yObs + 5 + obs.length * 4, yTot + 6) + 6;
   const cons = f.consideracoes.value.split("\n").map((s) => s.trim()).filter(Boolean);
   if (cons.length) {
     if (yg > 250) { doc.addPage(); yg = 20; }
