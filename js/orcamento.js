@@ -33,6 +33,36 @@ const CHAVE_RASCUNHO = "edd-orcamento-rascunho";
 let chaveRascunho = CHAVE_RASCUNHO;
 const CHAVE_ULTIMO = "edd-orcamento-ultimo-numero";
 
+/* Condições comerciais
+   - Validade do orçamento: dias corridos a partir da data
+   - Previsão: maior prazo de produção entre os itens (dias úteis) + instalação
+   - Pagamento: à vista com desconto, ou cartão em parcelas sem juros sobre o total cheio */
+const VALIDADE_DIAS = 15;
+const DIAS_INSTALACAO = 2;
+const PAGAMENTO = { descontoAvista: 6, parcelas: 8 };
+
+// Datas no formato do campo (AAAA-MM-DD), sem passar por UTC
+const paraData = (iso) => { const [a, m, d] = iso.split("-").map(Number); return new Date(a, m - 1, d); };
+const paraIso = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+function somarDias(iso, dias) {
+  const d = paraData(iso);
+  d.setDate(d.getDate() + dias);
+  return paraIso(d);
+}
+// Dias úteis: pula sábado e domingo (feriados não entram)
+function somarDiasUteis(iso, dias) {
+  const d = paraData(iso);
+  while (dias > 0) {
+    d.setDate(d.getDate() + 1);
+    if (d.getDay() !== 0 && d.getDay() !== 6) dias--;
+  }
+  return paraIso(d);
+}
+const condicoesPagamento = (total) => ({
+  avista: total * (1 - PAGAMENTO.descontoAvista / 100),
+  parcela: total / PAGAMENTO.parcelas,
+});
+
 const reais = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
 const numero = new Intl.NumberFormat("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -86,6 +116,7 @@ async function carregarModelos() {
         acessorios: parseFloat(op.dataset.acessorios) || 0,
         acessoriosNome: op.dataset.acessoriosNome || "acessórios",
         guia: parseFloat(op.dataset.guia) || 0,
+        prazo: parseInt(op.dataset.prazo, 10) || 0,
       });
     });
   } catch (e) {
@@ -230,7 +261,27 @@ function atualizar() {
   document.querySelector("#r-ajuste-rotulo").textContent = rotulo;
   document.querySelector("#r-desconto").textContent = valor;
   document.querySelector("#r-total").textContent = reais.format(t.total);
+  atualizarDatas(t);
+  const p = condicoesPagamento(t.total);
+  document.querySelector("#r-pagamento").textContent = t.total
+    ? `À vista: ${reais.format(p.avista)} (${PAGAMENTO.descontoAvista}% de desconto) · Cartão: ${PAGAMENTO.parcelas}x de ${reais.format(p.parcela)} sem juros`
+    : "";
   salvarRascunho();
+}
+
+// Validade (só orçamento) e previsão de entrega calculada pelos prazos dos itens
+function atualizarDatas(t) {
+  const ehPedido = form.tipo.value === "Pedido";
+  document.querySelector("#campo-validade").hidden = ehPedido;
+  if (form.data.value && !form.validade.value) form.validade.value = somarDias(form.data.value, VALIDADE_DIAS);
+
+  const maiorPrazo = Math.max(0, ...t.itens.map((i) => (MODELOS[i.dados.modelo] || {}).prazo || 0));
+  const dica = document.querySelector("#dica-prazo");
+  if (!maiorPrazo || !form.data.value) { dica.textContent = ""; return; }
+  if (form.previsaoAuto.value === "1") form.previsao.value = somarDiasUteis(form.data.value, maiorPrazo + DIAS_INSTALACAO);
+  dica.textContent = form.previsaoAuto.value === "1"
+    ? `Previsão calculada: ${maiorPrazo} dias úteis de produção (maior prazo entre os itens) + ${DIAS_INSTALACAO} de instalação.`
+    : "Previsão definida à mão. Apague a data para voltar ao cálculo automático.";
 }
 
 /* ---------- Rascunho (só neste aparelho) ---------- */
@@ -256,9 +307,15 @@ function novoOrcamento() {
   listaItens.innerHTML = "";
   form.numero.value = proximoNumero();
   form.data.value = hoje();
+  form.validade.value = somarDias(form.data.value, VALIDADE_DIAS);
   form.consideracoes.value = CONSIDERACOES_PADRAO;
   adicionarItem();
 }
+
+// Mudou a previsão na mão: para de calcular sozinho. Apagou: volta ao automático
+form.previsao.addEventListener("input", () => { form.previsaoAuto.value = form.previsao.value ? "" : "1"; });
+// Mudou a data do orçamento: a validade acompanha
+form.data.addEventListener("change", () => { if (form.data.value) form.validade.value = somarDias(form.data.value, VALIDADE_DIAS); });
 
 /* ---------- Máscaras simples ---------- */
 form.telefone.addEventListener("input", () => {
@@ -365,19 +422,24 @@ async function gerarPDF() {
   // Faixa de informações
   const yi = Math.max(y, yc) + 6;
   doc.setDrawColor(...AZUL); doc.setLineWidth(0.6); doc.line(M, yi, W - M, yi);
-  const colW = (W - 2 * M) / 4;
   const info = [
     [`Nº do ${tipo}`, f.numero.value || "-"],
     ["Data", dataBR(f.data.value)],
+    // Pedido fechado não tem validade
+    ...(tipo === "Pedido" ? [] : [["Válido até", dataBR(f.validade.value) || "-"]]),
     ["Previsão de Entrega", dataBR(f.previsao.value) || "A combinar"],
     ["Valor Total", numero.format(t.total)],
   ];
+  const colW = (W - 2 * M) / info.length;
+  const ultima = info.length - 1;
   info.forEach(([rotulo, valor], i) => {
     const x = M + colW * i;
-    if (i === 3) { doc.setFillColor(228, 232, 243); doc.rect(x, yi + 1.5, colW, 17, "F"); }
+    const destaque = i === ultima;
+    if (destaque) { doc.setFillColor(228, 232, 243); doc.rect(x, yi + 1.5, colW, 17, "F"); }
     doc.setFont("helvetica", "normal"); doc.setFontSize(8); doc.setTextColor(...CINZA);
-    doc.text(rotulo, x + colW / 2, yi + 7, { align: "center" });
-    doc.setFont("helvetica", "bold"); doc.setFontSize(i === 3 ? 13 : 12); doc.setTextColor(i === 3 ? AZUL[0] : 30, i === 3 ? AZUL[1] : 37, i === 3 ? AZUL[2] : 35);
+    doc.text(txt(rotulo), x + colW / 2, yi + 7, { align: "center" });
+    doc.setFont("helvetica", "bold"); doc.setFontSize(destaque ? 13 : 11.5);
+    if (destaque) doc.setTextColor(...AZUL); else doc.setTextColor(30, 37, 35);
     doc.text(txt(valor), x + colW / 2, yi + 14.5, { align: "center" });
   });
   doc.setLineWidth(0.6); doc.line(M, yi + 20, W - M, yi + 20);
@@ -426,8 +488,15 @@ async function gerarPDF() {
   doc.setFont("helvetica", "bold"); doc.setFontSize(11); doc.setTextColor(...AZUL);
   doc.text(`TOTAL  ${txt(reais.format(t.total))}`, xr, yTot + 1.5, { align: "right" });
 
+  // Condições de pagamento, logo abaixo do total
+  const pg = condicoesPagamento(t.total);
+  doc.setFont("helvetica", "normal"); doc.setFontSize(8.5); doc.setTextColor(30, 37, 35);
+  doc.text(txt(`À vista: ${reais.format(pg.avista)} (${PAGAMENTO.descontoAvista}% de desconto)`), xr, yTot + 7.5, { align: "right" });
+  doc.text(txt(`Cartão: ${PAGAMENTO.parcelas}x de ${reais.format(pg.parcela)} sem juros`), xr, yTot + 12, { align: "right" });
+  const yFimTotais = yTot + 12;
+
   // Considerações gerais
-  let yg = Math.max(yt + 5 + obs.length * 4, yTot + 6) + 6;
+  let yg = Math.max(yt + 5 + obs.length * 4, yFimTotais + 6) + 6;
   const cons = f.consideracoes.value.split("\n").map((s) => s.trim()).filter(Boolean);
   if (cons.length) {
     if (yg > 250) { doc.addPage(); yg = 20; }

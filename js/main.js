@@ -164,6 +164,19 @@ const campoGuia = document.querySelector("#sim-guia-campo");
 const reais = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
 const numero = new Intl.NumberFormat("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const CHAVE_LISTA = "edd-lista-orcamento";
+const simCondicoes = document.querySelector("#sim-condicoes");
+const simTotalCondicoes = document.querySelector("#sim-total-condicoes");
+
+/* Condições comerciais (mostradas na estimativa e na mensagem)
+   À vista: desconto sobre o total. Cartão: parcelas sem juros sobre o total cheio.
+   Prazo: dias úteis de produção do modelo (data-prazo) + dias de instalação. */
+const PAGAMENTO = { descontoAvista: 6, parcelas: 8 };
+const DIAS_INSTALACAO = 2;
+const textoPagamento = (valor) =>
+  `À vista: <strong>${reais.format(valor * (1 - PAGAMENTO.descontoAvista / 100))}</strong> (${PAGAMENTO.descontoAvista}% de desconto) ou ` +
+  `<strong>${PAGAMENTO.parcelas}x de ${reais.format(valor / PAGAMENTO.parcelas)}</strong> sem juros no cartão.`;
+const textoPrazo = (dias) => `Prazo: até ${dias + DIAS_INSTALACAO} dias úteis após a medição (produção + instalação).`;
+const semTags = (html) => html.replace(/<[^>]+>/g, "");
 
 // A lista fica guardada só no navegador do cliente, para não se perder se ele recarregar a página
 let lista = [];
@@ -232,6 +245,7 @@ function calcularSimulacao() {
     calculo,
     acessorios,
     guia,
+    prazo: opcao && opcao.dataset.prazo ? parseInt(opcao.dataset.prazo, 10) : 0,
     valor: medida * preco + (largura && altura ? acessorios * qtd : 0) + valorGuia * qtd,
     ambiente: sim.ambiente.value.trim(),
     acionamento: sim.acionamento.value,
@@ -275,6 +289,10 @@ function atualizarSimulacao() {
   simCalculo.hidden = !simCalculo.textContent;
   if (s.modelo && !s.preco) simValor.textContent = "Sob consulta";
   else simValor.textContent = s.area && s.preco ? reais.format(s.valor) : "—";
+  // Pagamento e prazo do item que está sendo simulado
+  const temValor = !!(s.area && s.preco);
+  simCondicoes.innerHTML = temValor ? `${textoPagamento(s.valor)}<br>${s.prazo ? textoPrazo(s.prazo) : ""}` : "";
+  simCondicoes.hidden = !temValor;
 }
 
 function validarSimulacao(s) {
@@ -322,6 +340,10 @@ function renderLista() {
   const soma = lista.reduce((t, s) => t + (s.preco ? s.valor : 0), 0);
   const algumSemPreco = lista.some((s) => !s.preco);
   simTotal.textContent = soma ? reais.format(soma) + (algumSemPreco ? " + itens sob consulta" : "") : "Sob consulta";
+  // Pagamento e prazo da lista inteira (prazo = o maior entre os itens)
+  const maiorPrazo = Math.max(0, ...lista.map((s) => s.prazo || 0));
+  simTotalCondicoes.innerHTML = soma ? `${textoPagamento(soma)}${maiorPrazo ? `<br>${textoPrazo(maiorPrazo)}` : ""}` : "";
+  simTotalCondicoes.hidden = !soma;
 }
 
 function limparMedidas() {
@@ -421,6 +443,8 @@ sim.addEventListener("submit", (e) => {
     ...(linhasCliente.length ? [...linhasCliente, ""] : []),
     blocos.join("\n\n"),
     itens.length > 1 && soma ? `\n*Total estimado:* ${reais.format(soma)}${itens.some((s) => !s.preco) ? " + itens sob consulta" : ""}` : null,
+    soma ? `\n*Pagamento:* ${semTags(textoPagamento(soma))}` : null,
+    Math.max(0, ...itens.map((s) => s.prazo || 0)) ? `*${semTags(textoPrazo(Math.max(...itens.map((s) => s.prazo || 0))))}*` : null,
     "",
     "Gostaria de confirmar o orçamento e agendar uma visita técnica.",
     "",
