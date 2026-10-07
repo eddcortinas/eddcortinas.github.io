@@ -142,6 +142,11 @@ textarea { resize: vertical; }
 .resumo strong { font-family: "Bricolage Grotesque", serif; font-size: 1.25rem; color: var(--azul); }
 .resumo__total { background: var(--azul) !important; }
 .resumo__total span, .resumo__total strong { color: var(--areia) !important; }
+.resumo__pagamento { margin: 10px 0 0; padding: 10px 14px; border-radius: 12px; background: var(--azul-claro); color: var(--azul); font-weight: 600; font-size: .92rem; }
+.resumo__pagamento:empty { display: none; }
+label[hidden] { display: none; }
+#dica-prazo { margin: 8px 0 0; }
+#dica-prazo:empty { display: none; }
 .acoes { display: flex; justify-content: flex-end; gap: 12px; }
 .erro { color: #a2412f; font-weight: 700; }
 .invalido { border-color: #a2412f !important; }
