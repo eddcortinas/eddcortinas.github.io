@@ -26,7 +26,25 @@ h1, h2 { font-family: "Bricolage Grotesque", Georgia, serif; margin: 0; letter-s
   border-bottom: 1px solid var(--borda);
 }
 .topo__logo { height: 54px; width: auto; }
-.topo__sair { margin-left: auto; padding: 8px 16px; }
+.topo__acoes { margin-left: auto; display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+.topo__acoes .btn { padding: 8px 16px; }
+
+/* Painel de acessos (administrador) */
+.acessos { width: min(560px, calc(100% - 32px)); border: 0; border-radius: 16px; padding: 22px; box-shadow: 0 20px 50px -20px rgba(11, 29, 84, .45); }
+.acessos::backdrop { background: rgba(11, 29, 84, .35); }
+.acessos__topo { display: flex; align-items: center; justify-content: space-between; }
+.acessos__topo h2 { font-size: 1.2rem; color: var(--azul); }
+.acessos__fechar { border: 0; background: none; font-size: 1.1rem; cursor: pointer; color: var(--suave); }
+.acessos__novo { display: grid; grid-template-columns: 1.4fr 1fr auto; gap: 10px; align-items: end; margin: 14px 0 6px; }
+.acessos__novo label { margin: 0; }
+.acessos__lista { list-style: none; margin: 12px 0 0; padding: 0; }
+.acessos__lista li { display: flex; align-items: center; gap: 8px; padding: 10px 0; border-top: 1px solid var(--borda); flex-wrap: wrap; }
+.acessos__lista .email { flex: 1; font-weight: 600; word-break: break-all; }
+.acessos__lista .status { font-size: .78rem; font-weight: 700; padding: 3px 8px; border-radius: 999px; background: #e3f2e6; color: #1f6b33; }
+.acessos__lista .status--bloq { background: #f6e3df; color: #a2412f; }
+.acessos__lista button { padding: 6px 12px; font-size: .82rem; }
+.acessos__lista .vazio { color: var(--suave); }
+@media (max-width: 560px) { .acessos__novo { grid-template-columns: 1fr; } }
 
 /* Login */
 .login { display: none; min-height: 100vh; place-items: center; padding: 24px 16px; }

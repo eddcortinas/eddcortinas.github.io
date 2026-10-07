@@ -541,6 +541,13 @@ section[id] { scroll-margin-top: calc(var(--header-h) + 8px); }
   font-weight: 600;
   color: var(--azul);
 }
+.sim__cliente {
+  margin: 0 0 18px;
+  padding: 12px 16px 0;
+  border: 1.5px dashed var(--borda);
+  border-radius: var(--raio-sm);
+}
+.sim__cliente legend { padding: 0 6px; font-weight: 700; color: var(--azul); }
 .sim__opcional {
   display: flex;
   align-items: center;
