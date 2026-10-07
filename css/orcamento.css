@@ -85,6 +85,9 @@ textarea { resize: vertical; }
   border: 1.5px dashed var(--borda);
   border-radius: 12px;
 }
+.opcao-pdf { flex-direction: row; align-items: center; align-self: end; gap: 8px; padding-bottom: 10px; cursor: pointer; }
+.opcao-pdf input { width: 20px; height: 20px; padding: 0; accent-color: var(--azul); }
+.bloco .grade + .grade { margin-top: 12px; }
 .item__guia { flex-direction: row; align-items: center; align-self: end; gap: 8px; padding-bottom: 10px; cursor: pointer; }
 .item__guia[hidden] { display: none; }
 .item__guia input { width: 20px; height: 20px; padding: 0; accent-color: var(--azul); }
