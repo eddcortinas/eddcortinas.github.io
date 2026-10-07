@@ -411,23 +411,25 @@ async function gerarPDF() {
     doc.setFontSize(18); doc.text(EMPRESA.nome, M, 30);
   }
 
+  // Dados da EDD (esquerda) e do cliente (direita) começam na mesma linha
+  const Y_NOME = 46, Y_LINHAS = 50.5, ENTRELINHA = 4.2;
   doc.setTextColor(30, 37, 35); doc.setFont("helvetica", "bold"); doc.setFontSize(9.5);
-  doc.text(EMPRESA.nome, M, 46);
+  doc.text(EMPRESA.nome, M, Y_NOME);
   doc.setFont("helvetica", "normal"); doc.setFontSize(8.5);
-  let y = 50.5;
-  EMPRESA.linhas.forEach((l) => { doc.text(txt(l), M, y); y += 4.2; });
-  if (f.vendedor.value) { doc.text(txt(`Vendedor: ${f.vendedor.value}`), M, y); y += 4.2; }
+  let y = Y_LINHAS;
+  EMPRESA.linhas.forEach((l) => { doc.text(txt(l), M, y); y += ENTRELINHA; });
+  if (f.vendedor.value) { doc.text(txt(`Vendedor: ${f.vendedor.value}`), M, y); y += ENTRELINHA; }
 
-  // Cliente (à direita)
-  doc.setFont("helvetica", "bold"); doc.setFontSize(9); doc.setTextColor(...AZUL);
-  doc.text("CLIENTE", W - M, 22, { align: "right" });
+  // Cliente (à direita), alinhado com os dados da EDD
+  doc.setFont("helvetica", "bold"); doc.setFontSize(8); doc.setTextColor(...AZUL);
+  doc.text("CLIENTE", W - M, Y_NOME - 5, { align: "right" });
   doc.setTextColor(30, 37, 35); doc.setFontSize(9.5);
-  doc.text(txt(f.cliente.value), W - M, 28, { align: "right", maxWidth: 85 });
+  doc.text(txt(f.cliente.value), W - M, Y_NOME, { align: "right", maxWidth: 85 });
   doc.setFont("helvetica", "normal"); doc.setFontSize(8.5);
-  let yc = 33;
+  let yc = Y_LINHAS;
   [f.documento.value && `CPF/CNPJ: ${f.documento.value}`, f.endereco.value, [f.bairro.value, f.cidade.value].filter(Boolean).join(" - "),
     f.cep.value && `CEP ${f.cep.value}`, f.telefone.value && `Tel.: ${f.telefone.value}`]
-    .filter(Boolean).forEach((l) => { doc.text(txt(l), W - M, yc, { align: "right", maxWidth: 85 }); yc += 4.2; });
+    .filter(Boolean).forEach((l) => { doc.text(txt(l), W - M, yc, { align: "right", maxWidth: 85 }); yc += ENTRELINHA; });
 
   // Faixa de informações
   const yi = Math.max(y, yc) + 6;
