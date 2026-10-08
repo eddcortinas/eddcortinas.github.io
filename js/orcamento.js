@@ -89,6 +89,13 @@ function soNumerosDecimal(campo) {
   v = b.length ? `${a},${b.join("").slice(0, 2)}` : a;
   if (v !== campo.value) campo.value = v;
 }
+// Valores em R$: o ponto é separador de milhar ("1.200,23"), então é ignorado
+function soValorEmReais(campo) {
+  let v = campo.value.replace(/\./g, "").replace(/[^\d,]/g, "");
+  const [a, ...b] = v.split(",");
+  v = b.length ? `${a},${b.join("").slice(0, 2)}` : a;
+  if (v !== campo.value) campo.value = v;
+}
 function soInteiros(campo) {
   const v = campo.value.replace(/\D/g, "");
   if (v !== campo.value) campo.value = v;
@@ -204,10 +211,12 @@ function adicionarItem(dados = {}) {
   };
   sel.addEventListener("change", mostrarGuia);
   mostrarGuia();
-  ["largura", "altura", "unitario"].forEach((k) => {
+  ["largura", "altura"].forEach((k) => {
     const c = el.querySelector(`[data-campo="${k}"]`);
     c.addEventListener("input", () => soNumerosDecimal(c));
   });
+  const unitario = el.querySelector('[data-campo="unitario"]');
+  unitario.addEventListener("input", () => soValorEmReais(unitario));
   const q = el.querySelector('[data-campo="qtd"]');
   q.addEventListener("input", () => soInteiros(q));
   el.querySelector(".item__remover").addEventListener("click", () => { el.remove(); atualizar(); });
@@ -340,7 +349,7 @@ form.cep.addEventListener("input", () => {
   const d = form.cep.value.replace(/\D/g, "").slice(0, 8);
   form.cep.value = d.length > 5 ? `${d.slice(0, 5)}-${d.slice(5)}` : d;
 });
-["frete", "desconto"].forEach((n) => form[n].addEventListener("input", () => soNumerosDecimal(form[n])));
+["frete", "desconto"].forEach((n) => form[n].addEventListener("input", () => soValorEmReais(form[n])));
 // Ajuste (%): aceita um sinal + ou - no começo e depois só números
 form.descontoPct.addEventListener("input", () => {
   const c = form.descontoPct;
@@ -463,7 +472,9 @@ async function gerarPDF() {
   // Tabela de itens
   const linhas = t.itens.filter((i) => MODELOS[i.dados.modelo]).map(({ dados, r, totalAjustado }) => {
     const m = MODELOS[dados.modelo];
-    const desc = [m.nome.toUpperCase(), m.guia && dados.guia && "Com guia", dados.descricao, !ocultarMedidas && r.medida].filter(Boolean).join("\n");
+    // Item de valor fixo com descrição: a própria descrição vira o título (sem "SERVIÇO / OUTRO ITEM")
+    const titulo = m.fixo && dados.descricao ? "" : m.nome.toUpperCase();
+    const desc = [titulo, m.guia && dados.guia && "Com guia", dados.descricao, !ocultarMedidas && r.medida].filter(Boolean).join("\n");
     // Preço já com o ajuste interno embutido
     return [txt(dados.ambiente || "-"), txt(desc), String(r.qtd || 1), txt(reais.format(totalAjustado))];
   });
