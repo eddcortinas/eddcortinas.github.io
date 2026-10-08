@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/orcamento.css?v=8">
+  <link rel="stylesheet" href="css/orcamento.css?v=9">
 </head>
 <body class="bloqueado">
   <!-- Login: a página só abre depois de entrar -->
@@ -102,7 +102,10 @@
           <span class="dica">Medidas em metros (2,50), centímetros (250) ou milímetros (2500).</span>
         </div>
         <div id="itens"></div>
-        <button type="button" class="btn btn--linha" id="add-item">+ Adicionar item</button>
+        <div class="itens__botoes">
+          <button type="button" class="btn btn--linha" id="add-item">+ Adicionar item</button>
+          <button type="button" class="btn btn--linha" id="add-avulso">+ Item avulso (nome e valor)</button>
+        </div>
       </section>
 
       <!-- Totais e observações -->
@@ -149,11 +152,11 @@
       <div class="grade grade--item">
         <label>Ambiente<input data-campo="ambiente" placeholder="Sala"></label>
         <label class="col-2">Modelo<select data-campo="modelo"></select></label>
-        <label>Largura<input data-campo="largura" inputmode="decimal" maxlength="7"></label>
-        <label>Altura<input data-campo="altura" inputmode="decimal" maxlength="7"></label>
+        <label class="item__medida">Largura<input data-campo="largura" inputmode="decimal" maxlength="7"></label>
+        <label class="item__medida">Altura<input data-campo="altura" inputmode="decimal" maxlength="7"></label>
         <label>Qtd<input data-campo="qtd" inputmode="numeric" maxlength="3" value="1"></label>
         <label class="item__guia" hidden><input type="checkbox" data-campo="guia"> Com guia</label>
-        <label class="col-3">Descrição (tecido, cor, comando, instalação...)<input data-campo="descricao"></label>
+        <label class="col-3"><span class="item__desc-rotulo">Descrição (tecido, cor, comando, instalação...)</span><input data-campo="descricao"></label>
         <label>Valor unitário<input data-campo="unitario" inputmode="decimal" placeholder="automático"></label>
         <label>Valor do item<output data-campo="total">R$ 0,00</output></label>
       </div>
@@ -164,6 +167,6 @@
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js" defer></script>
-  <script src="js/orcamento.js?v=17" defer></script>
+  <script src="js/orcamento.js?v=18" defer></script>
 </body>
 </html>
