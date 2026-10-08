@@ -145,6 +145,7 @@ textarea { resize: vertical; }
 .resumo__pagamento { margin: 10px 0 0; padding: 10px 14px; border-radius: 12px; background: var(--azul-claro); color: var(--azul); font-weight: 600; font-size: .92rem; }
 .resumo__pagamento:empty { display: none; }
 label[hidden] { display: none; }
+.itens__botoes { display: flex; flex-wrap: wrap; gap: 10px; }
 .campo-unidade { display: flex; gap: 6px; }
 .campo-unidade input { flex: 1; min-width: 0; }
 .campo-unidade select { width: auto; flex: 0 0 auto; padding-right: 6px; }
