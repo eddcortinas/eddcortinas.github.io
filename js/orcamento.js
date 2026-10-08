@@ -202,15 +202,20 @@ function adicionarItem(dados = {}) {
     if (campo && campo.type === "checkbox") campo.checked = !!v;
     else if (campo && "value" in campo && campo.tagName !== "OUTPUT") campo.value = v;
   });
-  // A opção de guia só aparece nos modelos que têm guia
+  // Campos conforme o modelo: guia só na rolô; item de valor fixo (avulso) não tem medidas
   const caixaGuia = el.querySelector(".item__guia");
-  const mostrarGuia = () => {
+  const medidas = el.querySelectorAll(".item__medida");
+  const rotuloDesc = el.querySelector(".item__desc-rotulo");
+  const ajustarCampos = () => {
     const m = MODELOS[sel.value];
     caixaGuia.hidden = !(m && m.guia);
     if (caixaGuia.hidden) caixaGuia.querySelector("input").checked = false;
+    const avulso = !!(m && m.fixo);
+    medidas.forEach((l) => { l.hidden = avulso; });
+    rotuloDesc.textContent = avulso ? "Nome / descrição do item (aparece no PDF)" : "Descrição (tecido, cor, comando, instalação...)";
   };
-  sel.addEventListener("change", mostrarGuia);
-  mostrarGuia();
+  sel.addEventListener("change", ajustarCampos);
+  ajustarCampos();
   ["largura", "altura"].forEach((k) => {
     const c = el.querySelector(`[data-campo="${k}"]`);
     c.addEventListener("input", () => soNumerosDecimal(c));
@@ -363,6 +368,13 @@ form.descontoPct.addEventListener("input", () => {
 form.addEventListener("input", atualizar);
 form.addEventListener("change", atualizar);
 document.querySelector("#add-item").addEventListener("click", () => adicionarItem());
+// Item avulso: já vem como "Serviço / outro item" (valor fixo), com o cursor no nome
+document.querySelector("#add-avulso").addEventListener("click", () => {
+  const i = MODELOS.findIndex((m) => m.nome === "Serviço / outro item");
+  adicionarItem({ modelo: i >= 0 ? String(i) : "" });
+  const novo = listaItens.lastElementChild;
+  novo.querySelector('[data-campo="descricao"]').focus();
+});
 document.querySelector("#novo").addEventListener("click", () => {
   if (!confirm("Começar um orçamento novo? O atual sai da tela.")) return;
   // Se veio de um link, o pedido dele continua guardado; o novo usa o rascunho geral
