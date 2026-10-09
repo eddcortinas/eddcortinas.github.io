@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+# Gerador de orçamento é interno
+Disallow: /orcamento.html
+
+Sitemap: https://eddcortinas.com.br/sitemap.xml
