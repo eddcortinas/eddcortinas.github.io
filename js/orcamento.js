@@ -286,11 +286,19 @@ function atualizar() {
     : "O ajuste interno entra no preço de cada item e não aparece no PDF.";
   document.querySelector("#r-total").textContent = reais.format(t.total);
   atualizarDatas(t);
-  const p = condicoesPagamento(t.total);
-  document.querySelector("#r-pagamento").textContent = t.total
-    ? `À vista: ${reais.format(p.avista)} (${PAGAMENTO.descontoAvista}% de desconto) · Cartão: ${PAGAMENTO.parcelas}x de ${reais.format(p.parcela)} sem juros`
-    : "";
+  // Forma de pagamento: texto calculado pelo total, até você editar à mão
+  if (form.pagamentoAuto.value === "1") form.pagamento.value = textoPagamentoPadrao(t.total);
+  document.querySelector("#dica-pagamento").textContent = form.pagamentoAuto.value === "1"
+    ? "Preenchido sozinho pelo total. Pode editar à vontade."
+    : "Texto editado por você (não muda mais sozinho). Apague tudo para voltar ao cálculo automático.";
   salvarRascunho();
+}
+
+function textoPagamentoPadrao(total) {
+  if (!total) return "";
+  const p = condicoesPagamento(total);
+  return `À vista: ${reais.format(p.avista)} (${PAGAMENTO.descontoAvista}% de desconto)\n` +
+    `Cartão: ${PAGAMENTO.parcelas}x de ${reais.format(p.parcela)} sem juros`;
 }
 
 // Validade (só orçamento) e previsão de entrega calculada pelos prazos dos itens
@@ -338,6 +346,8 @@ function novoOrcamento() {
 
 // Mudou a previsão na mão: para de calcular sozinho. Apagou: volta ao automático
 form.previsao.addEventListener("input", () => { form.previsaoAuto.value = form.previsao.value ? "" : "1"; });
+// Editou a forma de pagamento: fica como você escreveu. Apagou tudo: volta ao automático
+form.pagamento.addEventListener("input", () => { form.pagamentoAuto.value = form.pagamento.value.trim() ? "" : "1"; });
 // Mudou a data do orçamento: a validade acompanha
 form.data.addEventListener("change", () => { if (form.data.value) form.validade.value = somarDias(form.data.value, VALIDADE_DIAS); });
 
@@ -509,13 +519,18 @@ async function gerarPDF() {
   // Forma de pagamento e observações (à esquerda) e totais (à direita)
   let yt = doc.lastAutoTable.finalY + 8;
   if (yt > 240) { doc.addPage(); yt = 20; }
-  const pg = condicoesPagamento(t.total);
-  doc.setFont("helvetica", "bold"); doc.setFontSize(8.5); doc.setTextColor(30, 37, 35);
-  doc.text("FORMA DE PAGAMENTO:", M, yt);
-  doc.setFont("helvetica", "normal");
-  doc.text(txt(`À vista: ${reais.format(pg.avista)} (${PAGAMENTO.descontoAvista}% de desconto)`), M, yt + 5);
-  doc.text(txt(`Cartão: ${PAGAMENTO.parcelas}x de ${reais.format(pg.parcela)} sem juros`), M, yt + 9.5);
-  const yObs = yt + 17;
+  doc.setFontSize(8.5); doc.setTextColor(30, 37, 35);
+  // Texto do campo "Forma de pagamento" (automático ou editado); vazio = não aparece
+  const pagamento = f.pagamento.value.split("\n").map((s) => s.trim()).filter(Boolean)
+    .flatMap((linha) => doc.splitTextToSize(txt(linha), 105));
+  let yObs = yt;
+  if (pagamento.length) {
+    doc.setFont("helvetica", "bold");
+    doc.text("FORMA DE PAGAMENTO:", M, yt);
+    doc.setFont("helvetica", "normal");
+    pagamento.forEach((linha, i) => doc.text(linha, M, yt + 5 + i * 4.5));
+    yObs = yt + 5 + pagamento.length * 4.5 + 3;
+  }
   doc.setFont("helvetica", "bold");
   doc.text("OBS:", M, yObs);
   doc.setFont("helvetica", "normal");
