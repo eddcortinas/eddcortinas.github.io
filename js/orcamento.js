@@ -427,6 +427,9 @@ document.querySelector("#novo").addEventListener("click", () => {
     erro.hidden = true;
   }
   novoOrcamento();
+  // Campo oculto não volta sozinho ao limpar: sem isto o novo salvaria por cima do anterior
+  form.idServidor.value = "";
+  salvarRascunho();
   sugerirNumero();
 });
 
