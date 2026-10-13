@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/orcamento.css?v=9">
+  <link rel="stylesheet" href="css/orcamento.css?v=10">
 </head>
 <body class="bloqueado">
   <!-- Login: a página só abre depois de entrar -->
@@ -34,6 +34,7 @@
       <p>Preencha e baixe o PDF com a sua logo. Os dados ficam salvos só neste aparelho.</p>
     </div>
     <div class="topo__acoes">
+      <button type="button" class="btn btn--linha" id="abrir-lista">Meus orçamentos</button>
       <button type="button" class="btn btn--linha" id="abrir-acessos" hidden>Gerenciar acessos</button>
       <button type="button" class="btn btn--linha" id="sair">Sair</button>
     </div>
@@ -53,6 +54,30 @@
     </form>
     <p class="erro" id="acessos-msg" role="status" hidden></p>
     <ul class="acessos__lista" id="lista-acessos"></ul>
+  </dialog>
+
+  <!-- Orçamentos e pedidos salvos no servidor (cada um vê os seus; o administrador vê todos) -->
+  <dialog class="acessos salvos" id="painel-lista">
+    <div class="acessos__topo">
+      <h2>Meus orçamentos</h2>
+      <button type="button" class="acessos__fechar" id="fechar-lista" aria-label="Fechar">✕</button>
+    </div>
+    <div class="salvos__filtros">
+      <input type="search" id="busca-orc" placeholder="Buscar por cliente, nº ou bairro" autocomplete="off">
+      <select id="filtro-status" aria-label="Filtrar por status">
+        <option value="">Todos os status</option>
+        <option>Orçamento</option>
+        <option>Aprovado</option>
+        <option>Em produção</option>
+        <option>Pronto</option>
+        <option>Instalado</option>
+        <option>Perdido</option>
+      </select>
+      <label class="salvos__arquivados"><input type="checkbox" id="ver-arquivados"> Arquivados</label>
+    </div>
+    <p class="dica" id="lista-resumo"></p>
+    <p class="erro" id="lista-msg" role="status" hidden></p>
+    <ul class="salvos__lista" id="lista-orc"></ul>
   </dialog>
 
   <main class="pagina">
@@ -78,6 +103,8 @@
         </div>
         <!-- "1" = previsão calculada sozinha pelos prazos dos itens; vira "" se você mudar a data na mão -->
         <input type="hidden" name="previsaoAuto" value="1">
+        <!-- Identificação deste orçamento no servidor (vazio = ainda não foi salvo lá) -->
+        <input type="hidden" name="idServidor" value="">
         <p class="dica" id="dica-prazo"></p>
       </section>
 
@@ -145,6 +172,7 @@
 
       <div class="acoes">
         <button type="button" class="btn btn--linha" id="novo">Novo orçamento</button>
+        <button type="button" class="btn btn--linha" id="salvar">Salvar</button>
         <button type="submit" class="btn btn--primario">Baixar PDF</button>
       </div>
     </form>
@@ -170,6 +198,6 @@
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js" defer></script>
-  <script src="js/orcamento.js?v=19" defer></script>
+  <script src="js/orcamento.js?v=20" defer></script>
 </body>
 </html>
