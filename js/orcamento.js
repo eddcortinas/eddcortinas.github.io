@@ -240,22 +240,31 @@ function lerItens() {
   });
 }
 
+// Totais do que está na tela
 function totais() {
+  return calcularTotais({
+    descontoPct: form.descontoPct.value, frete: form.frete.value,
+    desconto: form.desconto.value, descontoTipo: form.descontoTipo.value,
+  }, lerItens());
+}
+
+// Totais a partir dos campos e itens (da tela ou de um rascunho guardado)
+function calcularTotais(campos, listaDeItens) {
   // Ajuste interno: "+10" aumenta e "-10" (ou só "10") diminui o preço de cada item.
   // Não vira linha no PDF: o cliente só vê os itens e o subtotal já ajustados.
-  const ajuste = String(form.descontoPct.value).trim();
+  const ajuste = String(campos.descontoPct || "").trim();
   const pctAjuste = lerNumero(ajuste.replace(/^[+-]/, ""));
   const fator = 1 + (ajuste.startsWith("+") ? 1 : -1) * pctAjuste / 100;
-  const itens = lerItens().map((d) => {
+  const itens = listaDeItens.map((d) => {
     const r = calcularItem(d);
     return { dados: d, r, totalAjustado: Math.max(0, r.total * fator) };
   });
   const subtotalSemAjuste = itens.reduce((t, i) => t + i.r.total, 0);
   const subtotal = itens.reduce((t, i) => t + i.totalAjustado, 0);
-  const frete = lerNumero(form.frete.value);
+  const frete = lerNumero(campos.frete);
   // Desconto que aparece no PDF: em % (sobre o subtotal) ou em R$
-  const valorDesconto = lerNumero(form.desconto.value);
-  const descontoEmPct = form.descontoTipo.value === "%";
+  const valorDesconto = lerNumero(campos.desconto);
+  const descontoEmPct = (campos.descontoTipo || "R$") === "%";
   const desconto = Math.min(subtotal, descontoEmPct ? subtotal * valorDesconto / 100 : valorDesconto);
   return {
     itens, subtotal, frete, desconto,
@@ -317,16 +326,40 @@ function atualizarDatas(t) {
 }
 
 /* ---------- Rascunho (só neste aparelho) ---------- */
+// Tudo o que está na tela: { campos, itens } (serve para o rascunho e para salvar no servidor)
+function dadosAtuais() {
+  const campos = {};
+  [...form.elements].forEach((c) => {
+    if (c.name && c.type !== "file") campos[c.name] = c.type === "checkbox" ? c.checked : c.value;
+  });
+  // Guarda também o nome do modelo, para não trocar de modelo se a lista mudar
+  const itens = lerItens().map((d) => ({ ...d, nome: MODELOS[d.modelo] ? MODELOS[d.modelo].nome : "" }));
+  return { campos, itens };
+}
 function salvarRascunho() {
-  try {
-    const campos = {};
-    [...form.elements].forEach((c) => {
-      if (c.name && c.type !== "file") campos[c.name] = c.type === "checkbox" ? c.checked : c.value;
-    });
-    // Guarda também o nome do modelo, para o rascunho não trocar de modelo se a lista mudar
-    const itens = lerItens().map((d) => ({ ...d, nome: MODELOS[d.modelo] ? MODELOS[d.modelo].nome : "" }));
-    localStorage.setItem(chaveRascunho, JSON.stringify({ campos, itens }));
-  } catch (e) {}
+  try { localStorage.setItem(chaveRascunho, JSON.stringify(dadosAtuais())); } catch (e) {}
+}
+// Itens guardados -> itens com o modelo certo da lista atual (pelo nome)
+function itensComModelo(itens) {
+  return (itens || []).map(({ nome, ...d }) => {
+    if (nome) { const i = MODELOS.findIndex((m) => m.nome === nome); d.modelo = i >= 0 ? String(i) : ""; }
+    return d;
+  });
+}
+// Coloca na tela um orçamento guardado ({ campos, itens })
+function aplicarDados(r) {
+  form.reset();
+  listaItens.innerHTML = "";
+  Object.entries(r.campos || {}).forEach(([k, v]) => {
+    const c = form[k];
+    if (!c || c.type === "file") return;
+    if (c.type === "checkbox") c.checked = v === true;
+    else c.value = v;
+  });
+  // Rascunho de antes do desconto em %: o desconto dele era em R$
+  if (!("descontoTipo" in (r.campos || {}))) form.descontoTipo.value = "R$";
+  const itens = itensComModelo(r.itens);
+  (itens.length ? itens : [{}]).forEach((d) => adicionarItem(d));
 }
 function carregarRascunho() {
   try { return JSON.parse(localStorage.getItem(chaveRascunho)); } catch (e) { return null; }
@@ -394,6 +427,7 @@ document.querySelector("#novo").addEventListener("click", () => {
     erro.hidden = true;
   }
   novoOrcamento();
+  sugerirNumero();
 });
 
 /* ---------- PDF ---------- */
@@ -616,6 +650,8 @@ form.addEventListener("submit", async (e) => {
   }
   if (!window.jspdf) { erro.textContent = "Não foi possível carregar o gerador de PDF. Verifique a internet e tente de novo."; erro.hidden = false; return; }
   await gerarPDF();
+  // Baixou o PDF: guarda também no servidor, para aparecer em "Meus orçamentos"
+  if (await salvarNoServidor({ silencioso: true })) aviso(`PDF baixado e ${form.tipo.value.toLowerCase()} nº ${form.numero.value} salvo em "Meus orçamentos".`);
 });
 
 /* ---------- Pedido vindo do simulador do site (link #i=...) ---------- */
@@ -698,9 +734,11 @@ function mostrarErroLogin(texto) {
   loginErro.textContent = texto;
   loginErro.hidden = false;
 }
-function liberar(adm) {
+let usuarioAtual = "";
+function liberar(adm, usuario) {
   document.body.classList.remove("bloqueado");
   botaoAcessos.hidden = !adm;
+  usuarioAtual = usuario || "";
   iniciar();
 }
 
@@ -724,7 +762,7 @@ formLogin.addEventListener("submit", async (e) => {
   }
   try { (formLogin.lembrar.checked ? localStorage : sessionStorage).setItem(CHAVE_ACESSO, r.acesso); } catch (err) {}
   formLogin.reset();
-  liberar(r.adm);
+  liberar(r.adm, r.usuario);
 });
 
 document.querySelector("#sair").addEventListener("click", () => {
@@ -807,6 +845,172 @@ formAcesso.addEventListener("submit", async (e) => {
   carregarAcessos();
 });
 
+/* ---------- Orçamentos salvos no servidor ----------
+   "Salvar" (e "Baixar PDF") guardam o orçamento no servidor; "Meus orçamentos" lista, busca e reabre.
+   Cada pessoa vê os seus; o administrador vê todos. */
+const STATUS = ["Orçamento", "Aprovado", "Em produção", "Pronto", "Instalado", "Perdido"];
+const painelLista = document.querySelector("#painel-lista");
+const listaOrc = document.querySelector("#lista-orc");
+const listaMsg = document.querySelector("#lista-msg");
+let orcamentosSalvos = [];
+
+function aviso(texto, cor = "#0B1D54") {
+  erro.textContent = texto;
+  erro.style.color = cor;
+  erro.hidden = !texto;
+}
+function resumoPara(dados, total) {
+  const c = dados.campos || {};
+  return { numero: c.numero, tipo: c.tipo, cliente: c.cliente, bairro: c.bairro, total };
+}
+
+// Guarda no servidor o que está na tela. Devolve true se salvou
+async function salvarNoServidor({ silencioso = false } = {}) {
+  const t = totais();
+  if (!form.cliente.value.trim() && !t.total) {
+    if (!silencioso) aviso("Preencha pelo menos o cliente ou um item antes de salvar.", "");
+    return false;
+  }
+  const dados = dadosAtuais();
+  const r = await api("POST", "/orcamentos", { id: form.idServidor.value, dados, resumo: resumoPara(dados, t.total) })
+    .catch(() => ({ ok: false, erro: "Sem conexão com o servidor. O rascunho continua guardado neste aparelho." }));
+  if (!r.ok) {
+    if (!silencioso) aviso(r.erro || "Não foi possível salvar. Tente de novo.", "");
+    return false;
+  }
+  form.idServidor.value = r.id;
+  if (!form.numero.value.trim()) form.numero.value = r.numero;
+  salvarRascunho();
+  if (!silencioso) aviso(`${form.tipo.value} nº ${form.numero.value} salvo. Ele aparece em "Meus orçamentos" em qualquer aparelho.`);
+  return true;
+}
+document.querySelector("#salvar").addEventListener("click", async (e) => {
+  e.currentTarget.disabled = true;
+  await salvarNoServidor();
+  e.currentTarget.disabled = false;
+});
+
+// Sugere o próximo número pela sequência do servidor (só em orçamento novo, ainda não salvo)
+async function sugerirNumero() {
+  if (form.idServidor.value) return;
+  const r = await api("GET", "/proximo-numero").catch(() => null);
+  if (!r || !r.ok || form.idServidor.value) return;
+  const atual = parseInt(form.numero.value, 10) || 0;
+  if (!form.numero.value.trim() || atual < r.numero) { form.numero.value = String(r.numero); salvarRascunho(); }
+}
+
+// Primeira vez neste aparelho: manda para o servidor os rascunhos que ficaram guardados aqui
+async function importarRascunhos() {
+  let chaves = [];
+  try { chaves = Object.keys(localStorage).filter((k) => k.startsWith(CHAVE_RASCUNHO)); } catch (e) { return; }
+  for (const chave of chaves) {
+    let r;
+    try { r = JSON.parse(localStorage.getItem(chave)); } catch (e) { continue; }
+    if (!r || !r.campos || r.campos.idServidor) continue;
+    const t = calcularTotais(r.campos, itensComModelo(r.itens));
+    if (!String(r.campos.cliente || "").trim() || !t.total) continue; // rascunho vazio ou incompleto não vai
+    const res = await api("POST", "/orcamentos", { dados: r, resumo: resumoPara(r, t.total) }).catch(() => null);
+    if (!res || !res.ok) return; // sem conexão: tenta de novo na próxima vez
+    r.campos.idServidor = res.id;
+    if (!r.campos.numero) r.campos.numero = res.numero;
+    try { localStorage.setItem(chave, JSON.stringify(r)); } catch (e) {}
+    // Se é o que está aberto na tela, a tela também passa a saber que já foi salvo
+    if (chave === chaveRascunho && !form.idServidor.value) {
+      form.idServidor.value = res.id;
+      if (!form.numero.value.trim()) form.numero.value = res.numero;
+    }
+  }
+}
+
+function avisoLista(texto, ok) {
+  listaMsg.textContent = texto;
+  listaMsg.style.color = ok ? "#1f6b33" : "";
+  listaMsg.hidden = !texto;
+}
+function desenharLista() {
+  const busca = document.querySelector("#busca-orc").value.trim().toLowerCase();
+  const status = document.querySelector("#filtro-status").value;
+  const verArquivados = document.querySelector("#ver-arquivados").checked;
+  const visiveis = orcamentosSalvos.filter((o) =>
+    o.arquivado === verArquivados &&
+    (!status || o.status === status) &&
+    (!busca || [o.cliente, o.numero, o.bairro].some((v) => String(v || "").toLowerCase().includes(busca))));
+  const soma = visiveis.reduce((t, o) => t + (o.total || 0), 0);
+  document.querySelector("#lista-resumo").textContent = visiveis.length
+    ? `${visiveis.length} ${visiveis.length === 1 ? "item" : "itens"} · ${reais.format(soma)}`
+    : "";
+  listaOrc.innerHTML = "";
+  if (!visiveis.length) {
+    listaOrc.innerHTML = `<li><span class="vazio">${orcamentosSalvos.length ? "Nada encontrado com esse filtro." : 'Nenhum orçamento salvo ainda. Use o botão "Salvar" ou "Baixar PDF".'}</span></li>`;
+    return;
+  }
+  visiveis.forEach((o) => {
+    const li = document.createElement("li");
+    if (o.arquivado) li.className = "is-arquivado";
+    const titulo = document.createElement("span");
+    titulo.className = "salvos__titulo";
+    titulo.textContent = `${o.tipo || "Orçamento"} nº ${o.numero || "-"} · ${o.cliente || "sem nome"}`;
+    const valor = document.createElement("span");
+    valor.className = "salvos__valor";
+    valor.textContent = reais.format(o.total || 0);
+    const info = document.createElement("span");
+    info.className = "salvos__info";
+    info.textContent = [o.bairro, `alterado em ${dataBR(String(o.atualizado || "").slice(0, 10))}`, o.dono !== usuarioAtual && o.dono ? `feito por ${o.dono}` : ""].filter(Boolean).join(" · ");
+
+    const acoes = document.createElement("div");
+    acoes.className = "salvos__acoes";
+    const abrir = botaoLinha("Abrir", () => abrirSalvo(o.id));
+    const sel = document.createElement("select");
+    sel.setAttribute("aria-label", "Status");
+    sel.innerHTML = STATUS.map((s) => `<option${s === o.status ? " selected" : ""}>${s}</option>`).join("");
+    sel.addEventListener("change", async () => {
+      const res = await api("POST", "/orcamentos/status", { id: o.id, status: sel.value }).catch(() => ({ ok: false }));
+      if (res.ok) o.status = sel.value;
+      avisoLista(res.ok ? `Nº ${o.numero}: status "${sel.value}".` : res.erro || "Não deu certo, tente de novo.", res.ok);
+      desenharLista();
+    });
+    const arquivar = botaoLinha(o.arquivado ? "Desarquivar" : "Arquivar", async () => {
+      const res = await api("POST", "/orcamentos/arquivar", { id: o.id, arquivado: !o.arquivado }).catch(() => ({ ok: false }));
+      if (res.ok) o.arquivado = !o.arquivado;
+      avisoLista(res.ok ? `Nº ${o.numero} ${o.arquivado ? "arquivado" : "de volta à lista"}.` : res.erro || "Não deu certo, tente de novo.", res.ok);
+      desenharLista();
+    });
+    acoes.append(abrir, sel, arquivar);
+    li.append(titulo, valor, info, acoes);
+    listaOrc.appendChild(li);
+  });
+}
+async function carregarLista() {
+  listaOrc.innerHTML = '<li><span class="vazio">Carregando...</span></li>';
+  const r = await api("GET", "/orcamentos").catch(() => ({ ok: false, erro: "Sem conexão com o servidor." }));
+  if (!r.ok) { listaOrc.innerHTML = ""; return avisoLista(r.erro || "Não foi possível carregar a lista."); }
+  orcamentosSalvos = r.orcamentos;
+  desenharLista();
+}
+// Abre um orçamento salvo: ele passa a ter o próprio rascunho neste aparelho
+async function abrirSalvo(id) {
+  const r = await api("GET", `/orcamentos/${id}`).catch(() => ({ ok: false, erro: "Sem conexão com o servidor." }));
+  if (!r.ok) { desenharLista(); return avisoLista(r.erro || "Não foi possível abrir."); }
+  chaveRascunho = `${CHAVE_RASCUNHO}-s-${id}`;
+  history.replaceState(null, "", location.pathname);
+  aplicarDados(r.dados);
+  form.idServidor.value = id;
+  atualizar();
+  painelLista.close();
+  aviso(`${form.tipo.value} nº ${form.numero.value} aberto. Depois de alterar, clique em "Salvar".`);
+  window.scrollTo({ top: 0 });
+}
+
+document.querySelector("#abrir-lista").addEventListener("click", () => {
+  avisoLista("");
+  painelLista.showModal();
+  carregarLista();
+});
+document.querySelector("#fechar-lista").addEventListener("click", () => painelLista.close());
+["#busca-orc", "#filtro-status", "#ver-arquivados"].forEach((s) => {
+  document.querySelector(s).addEventListener("input", desenharLista);
+});
+
 /* ---------- Início (só depois do login) ---------- */
 let iniciado = false;
 async function iniciar() {
@@ -824,31 +1028,22 @@ async function iniciar() {
     erro.style.color = "#0B1D54";
     erro.hidden = false;
   } else if (r && r.campos) {
-    Object.entries(r.campos).forEach(([k, v]) => {
-      const c = form[k];
-      if (!c || c.type === "file") return;
-      if (c.type === "checkbox") c.checked = v === true;
-      else c.value = v;
-    });
-    // Rascunho de antes do desconto em %: o desconto dele era em R$
-    if (!("descontoTipo" in r.campos)) form.descontoTipo.value = "R$";
-    (r.itens && r.itens.length ? r.itens : [{}]).forEach(({ nome, ...d }) => {
-      if (nome) { const i = MODELOS.findIndex((m) => m.nome === nome); d.modelo = i >= 0 ? String(i) : ""; }
-      adicionarItem(d);
-    });
+    aplicarDados(r);
   } else {
     novoOrcamento();
   }
   if (!form.consideracoes.value) form.consideracoes.value = CONSIDERACOES_PADRAO;
   if (!form.data.value) form.data.value = hoje();
   atualizar();
+  // Primeiro sobem os rascunhos antigos (a numeração acompanha), depois vem a sugestão do próximo nº
+  importarRascunhos().then(sugerirNumero);
 }
 
 // Já entrou antes neste aparelho? Confirma com o servidor (vale bloqueio na hora)
 (async () => {
   if (!lerAcesso()) return formLogin.usuario.focus();
   const r = await api("GET", "/eu").catch(() => null);
-  if (r && r.ok) return liberar(r.adm);
+  if (r && r.ok) return liberar(r.adm, r.usuario);
   apagarAcesso();
   if (!r) mostrarErroLogin("Sem conexão com o servidor. Confira a internet e tente de novo.");
   else if (r.status === 401) mostrarErroLogin("Entre novamente.");
