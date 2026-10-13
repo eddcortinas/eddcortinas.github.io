@@ -125,6 +125,10 @@
           <label>Ajuste interno (%)<input name="descontoPct" maxlength="6" autocomplete="off" placeholder="-10 ou +10"></label>
         </div>
         <p class="dica" id="dica-ajuste">O ajuste interno entra no preço de cada item e não aparece no PDF.</p>
+        <label>Forma de pagamento (aparece no PDF)<textarea name="pagamento" rows="2" placeholder="Ex.: 50% de entrada e 50% na instalação."></textarea></label>
+        <!-- "1" = texto calculado sozinho pelo total; vira "" se você editar. Apagou tudo: volta ao automático -->
+        <input type="hidden" name="pagamentoAuto" value="1">
+        <p class="dica" id="dica-pagamento"></p>
         <label>Observações<textarea name="obs" rows="2" placeholder="Ex.: tecido e cor a confirmar na visita."></textarea></label>
         <label>Considerações gerais (uma por linha)<textarea name="consideracoes" rows="7"></textarea></label>
         <label>Fotos do ambiente (opcional, até 2)<input type="file" name="fotos" accept="image/*" multiple></label>
@@ -135,7 +139,6 @@
           <div><span id="r-desconto-rotulo">Desconto</span><strong id="r-desconto">R$ 0,00</strong></div>
           <div class="resumo__total"><span>Total</span><strong id="r-total">R$ 0,00</strong></div>
         </div>
-        <p class="resumo__pagamento" id="r-pagamento"></p>
       </section>
 
       <p class="erro" id="erro" role="alert" hidden></p>
@@ -167,6 +170,6 @@
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js" defer></script>
-  <script src="js/orcamento.js?v=18" defer></script>
+  <script src="js/orcamento.js?v=19" defer></script>
 </body>
 </html>
