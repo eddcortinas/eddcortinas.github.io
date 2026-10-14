@@ -959,13 +959,19 @@ function avisoLista(texto, ok) {
   listaMsg.hidden = !texto;
 }
 function desenharLista() {
-  const busca = document.querySelector("#busca-orc").value.trim().toLowerCase();
+  // Busca sem diferenciar maiúsculas nem acentos; várias palavras: todas precisam aparecer
+  const simples = (v) => String(v || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
+  const palavras = simples(document.querySelector("#busca-orc").value).split(/\s+/).filter(Boolean);
+  const tipo = document.querySelector("#filtro-tipo").value;
   const status = document.querySelector("#filtro-status").value;
   const verArquivados = document.querySelector("#ver-arquivados").checked;
-  const visiveis = orcamentosSalvos.filter((o) =>
-    o.arquivado === verArquivados &&
-    (!status || o.status === status) &&
-    (!busca || [o.cliente, o.numero, o.bairro].some((v) => String(v || "").toLowerCase().includes(busca))));
+  const visiveis = orcamentosSalvos.filter((o) => {
+    const texto = simples([o.cliente, o.numero, o.bairro].join(" "));
+    return o.arquivado === verArquivados &&
+      (!tipo || (o.tipo || "Orçamento") === tipo) &&
+      (!status || o.status === status) &&
+      palavras.every((p) => texto.includes(p));
+  });
   const soma = visiveis.reduce((t, o) => t + (o.total || 0), 0);
   document.querySelector("#lista-resumo").textContent = visiveis.length
     ? `${visiveis.length} ${visiveis.length === 1 ? "item" : "itens"} · ${reais.format(soma)}`
@@ -980,7 +986,11 @@ function desenharLista() {
     if (o.arquivado) li.className = "is-arquivado";
     const titulo = document.createElement("span");
     titulo.className = "salvos__titulo";
-    titulo.textContent = `${o.tipo || "Orçamento"} nº ${o.numero || "-"} · ${o.cliente || "sem nome"}`;
+    // Nome do cliente em destaque; o tipo vem numa etiqueta, para não confundir pedido com orçamento
+    const etiqueta = document.createElement("span");
+    etiqueta.className = `salvos__tipo${o.tipo === "Pedido" ? " salvos__tipo--pedido" : ""}`;
+    etiqueta.textContent = `${o.tipo || "Orçamento"} nº ${o.numero || "-"}`;
+    titulo.append(etiqueta, document.createTextNode(o.cliente || "sem nome"));
     const valor = document.createElement("span");
     valor.className = "salvos__valor";
     valor.textContent = reais.format(o.total || 0);
@@ -993,7 +1003,7 @@ function desenharLista() {
     const abrir = botaoLinha("Abrir", () => abrirSalvo(o.id));
     const sel = document.createElement("select");
     sel.setAttribute("aria-label", "Status");
-    sel.innerHTML = STATUS.map((s) => `<option${s === o.status ? " selected" : ""}>${s}</option>`).join("");
+    sel.innerHTML = STATUS.map((s) => `<option value="${s}"${s === o.status ? " selected" : ""}>${s === "Orçamento" ? "Em aberto" : s}</option>`).join("");
     sel.addEventListener("change", async () => {
       const res = await api("POST", "/orcamentos/status", { id: o.id, status: sel.value }).catch(() => ({ ok: false }));
       if (res.ok) o.status = sel.value;
@@ -1057,7 +1067,7 @@ document.querySelector("#abrir-lista").addEventListener("click", () => {
   carregarLista();
 });
 document.querySelector("#fechar-lista").addEventListener("click", () => painelLista.close());
-["#busca-orc", "#filtro-status", "#ver-arquivados"].forEach((s) => {
+["#busca-orc", "#filtro-tipo", "#filtro-status", "#ver-arquivados"].forEach((s) => {
   document.querySelector(s).addEventListener("input", desenharLista);
 });
 
