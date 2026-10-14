@@ -426,30 +426,39 @@ document.querySelector("#add-avulso").addEventListener("click", () => {
   novo.querySelector('[data-campo="descricao"]').focus();
 });
 // Guarda o que está na tela (se tiver algo) e devolve o número seguinte ao dele
-async function fecharAtual() {
+// A tela é liberada na hora; o envio ao servidor segue por trás
+function fecharAtual() {
   const anterior = parseInt(form.numero.value, 10) || 0;
-  await salvarNoServidor({ silencioso: true });
+  const t = totais();
+  const temAlgo = !!form.cliente.value.trim() || t.total > 0;
+  let envio = Promise.resolve();
+  if (temAlgo) {
+    const dados = dadosAtuais();
+    envio = api("POST", "/orcamentos", { id: form.idServidor.value, dados, resumo: resumoPara(dados, t.total) }).catch(() => null);
+  }
   // Se veio de um link ou da lista, aquele continua guardado; o novo usa o rascunho geral
   if (chaveRascunho !== CHAVE_RASCUNHO) {
     chaveRascunho = CHAVE_RASCUNHO;
     history.replaceState(null, "", location.pathname);
   }
   erro.hidden = true;
-  return anterior ? anterior + 1 : 0;
+  // Tela vazia não gasta número: o novo fica com o mesmo
+  return { seguinte: temAlgo && anterior ? anterior + 1 : anterior, envio };
 }
 // Número do novo: o seguinte ao que estava na tela, ou o da sequência do servidor se for maior
-async function numerarNovo(seguinte) {
-  if (seguinte > (parseInt(form.numero.value, 10) || 0)) form.numero.value = String(seguinte);
+async function numerarNovo({ seguinte, envio }) {
+  if (seguinte) form.numero.value = String(seguinte);
   atualizar();
   salvarRascunho();
+  await envio;
   await sugerirNumero();
 }
-document.querySelector("#novo").addEventListener("click", async () => {
+document.querySelector("#novo").addEventListener("click", () => {
   if (!confirm("Começar um orçamento novo? O atual é salvo e sai da tela.")) return;
-  const seguinte = await fecharAtual();
+  const fechado = fecharAtual();
   novoOrcamento();
-  await numerarNovo(seguinte);
   window.scrollTo({ top: 0 });
+  numerarNovo(fechado);
 });
 
 /* ---------- PDF ---------- */
@@ -1027,7 +1036,7 @@ async function abrirSalvo(id) {
 async function copiarSalvo(id) {
   const r = await api("GET", `/orcamentos/${id}`).catch(() => ({ ok: false, erro: "Sem conexão com o servidor." }));
   if (!r.ok) { desenharLista(); return avisoLista(r.erro || "Não foi possível copiar."); }
-  const seguinte = await fecharAtual();
+  const fechado = fecharAtual();
   aplicarDados(r.dados);
   const origem = form.numero.value;
   form.idServidor.value = "";
@@ -1036,7 +1045,7 @@ async function copiarSalvo(id) {
   form.validade.value = somarDias(form.data.value, VALIDADE_DIAS);
   form.previsao.value = "";
   form.previsaoAuto.value = "1";
-  await numerarNovo(seguinte);
+  await numerarNovo(fechado);
   painelLista.close();
   aviso(`Cópia do nº ${origem} aberta como nº ${form.numero.value || "novo"}. Altere o que precisar e clique em "Salvar".`);
   window.scrollTo({ top: 0 });
