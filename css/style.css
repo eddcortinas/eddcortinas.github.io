@@ -1209,3 +1209,55 @@ section[id] { scroll-margin-top: calc(var(--header-h) + 8px); }
 
   .whatsapp-float { right: 16px; bottom: 16px; width: 56px; height: 56px; }
 }
+
+/* ---------- Galeria: filtro por ambiente e "ver mais" ---------- */
+.gallery__filtros { display: flex; flex-wrap: wrap; gap: 8px; margin: -12px 0 24px; }
+.gallery__filtro {
+  padding: 8px 16px;
+  border: 1.5px solid var(--areia-escura);
+  border-radius: 999px;
+  background: var(--branco);
+  color: var(--azul);
+  font: 600 .92rem var(--fonte-texto);
+  cursor: pointer;
+}
+.gallery__filtro:hover { border-color: var(--azul); }
+.gallery__filtro.is-ativo { background: var(--azul); border-color: var(--azul); color: var(--areia); }
+.gallery__item.is-filtrado { display: none; }
+.gallery__mais { display: flex; justify-content: center; margin-top: 28px; }
+.gallery__mais[hidden] { display: none; }
+
+/* ---------- Depoimentos: 4 por linha e quem atendeu ---------- */
+.testimonials { grid-template-columns: repeat(4, 1fr); gap: 20px; }
+.testimonial { padding: 28px 24px; }
+.testimonial blockquote { font-size: 1rem; }
+.testimonial figcaption .testimonial__atendente {
+  display: block;
+  width: fit-content;
+  margin-top: 8px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--azul-claro);
+  color: var(--azul);
+  font-size: .8rem;
+  font-weight: 700;
+}
+@media (max-width: 1024px) {
+  .testimonials { grid-template-columns: repeat(2, 1fr); }
+}
+/* Celular: os depoimentos passam de lado, um por vez */
+@media (max-width: 600px) {
+  .testimonials {
+    display: flex;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    gap: 14px;
+    margin-inline: -16px;
+    padding: 4px 16px 12px;
+    scrollbar-width: none;
+  }
+  .testimonials::-webkit-scrollbar, .gallery__filtros::-webkit-scrollbar { display: none; }
+  .testimonial { flex: 0 0 85%; scroll-snap-align: center; }
+  .gallery__filtros { flex-wrap: nowrap; overflow-x: auto; margin-inline: -16px; padding: 0 16px 4px; scrollbar-width: none; }
+  .gallery__filtro { flex: 0 0 auto; }
+}
