@@ -48,21 +48,23 @@ h1, h2 { font-family: "Bricolage Grotesque", Georgia, serif; margin: 0; letter-s
 
 /* Lista de orçamentos salvos */
 .salvos { width: min(760px, calc(100% - 24px)); max-height: 88vh; }
-.salvos__filtros { display: grid; grid-template-columns: 1fr auto auto; gap: 10px; align-items: center; margin: 14px 0 8px; }
+.salvos__filtros { display: grid; grid-template-columns: 1fr auto auto auto; gap: 10px; align-items: center; margin: 14px 0 8px; }
 .salvos__filtros select { width: auto; }
 .salvos__arquivados { flex-direction: row; align-items: center; gap: 6px; margin: 0; font-weight: 500; white-space: nowrap; }
 .salvos__arquivados input { width: 18px; height: 18px; padding: 0; accent-color: var(--azul); }
 .salvos__lista { list-style: none; margin: 8px 0 0; padding: 0; }
 .salvos__lista li { display: grid; grid-template-columns: 1fr auto; gap: 6px 12px; padding: 12px 0; border-top: 1px solid var(--borda); }
 .salvos__lista li.is-arquivado { opacity: .6; }
-.salvos__titulo { font-weight: 700; color: var(--azul); }
+.salvos__titulo { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; font-weight: 700; font-size: 1.02rem; color: var(--azul); }
+.salvos__tipo { font-size: .74rem; font-weight: 700; padding: 3px 9px; border-radius: 999px; background: var(--azul-claro); color: var(--azul); white-space: nowrap; }
+.salvos__tipo--pedido { background: var(--laranja); color: var(--grafite); }
 .salvos__info { grid-column: 1; font-size: .84rem; color: var(--suave); }
 .salvos__valor { grid-row: 1; grid-column: 2; font-family: "Bricolage Grotesque", serif; font-weight: 700; color: var(--azul); text-align: right; white-space: nowrap; }
 .salvos__acoes { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .salvos__acoes select { width: auto; padding: 6px 10px; font-size: .84rem; }
 .salvos__acoes button { padding: 6px 14px; font-size: .84rem; }
 .salvos__lista .vazio { display: block; color: var(--suave); }
-@media (max-width: 560px) { .salvos__filtros { grid-template-columns: 1fr 1fr; } .salvos__filtros input[type=search] { grid-column: 1 / -1; } }
+@media (max-width: 640px) { .salvos__filtros { grid-template-columns: 1fr 1fr; } .salvos__filtros input[type=search] { grid-column: 1 / -1; } .salvos__filtros select { width: 100%; } }
 
 /* Login */
 .login { display: none; min-height: 100vh; place-items: center; padding: 24px 16px; }
