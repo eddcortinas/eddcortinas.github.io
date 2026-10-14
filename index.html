@@ -28,7 +28,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/style.css?v=26">
+  <link rel="stylesheet" href="css/style.css?v=27">
 
   <!-- Dados estruturados para o Google -->
   <script type="application/ld+json">
@@ -63,7 +63,7 @@
   <header class="header" id="topo">
     <div class="container header__inner">
       <a href="#topo" class="logo" aria-label="EDD Cortinas, voltar ao início">
-        <img src="img/logo-edd-cortinas.png" alt="EDD Cortinas – Estilo em sua decoração" width="537" height="246">
+        <img src="img/logo-edd-cortinas-sem-sombra.png" alt="EDD Cortinas – Estilo em sua decoração" width="537" height="246">
       </a>
 
       <nav class="nav" id="menu" aria-label="Menu principal">
@@ -377,6 +377,65 @@
           </div>
         </div>
 
+        <div class="sim__lado">
+        <!-- Dois jeitos de simular: com medidas (exato) ou sem medidas (faixa estimada) -->
+        <div class="sim__modos" role="tablist" aria-label="Como você quer simular">
+          <button type="button" role="tab" class="sim__modo is-ativo" id="modo-medidas" aria-selected="true">Tenho as medidas</button>
+          <button type="button" role="tab" class="sim__modo" id="modo-rapido" aria-selected="false">Não tenho as medidas</button>
+        </div>
+
+        <!-- Modo rápido: 3 perguntas de toque -> faixa estimada -->
+        <div class="card form sim__rapido" id="sim-rapido" hidden>
+          <div class="rapido__progresso" aria-hidden="true"><span></span><span></span><span></span></div>
+
+          <div class="rapido__passo is-ativo" data-passo="1">
+            <p class="rapido__pergunta">1 de 3 · Para qual ambiente?</p>
+            <div class="rapido__opcoes" data-campo="ambiente">
+              <button type="button">Sala</button>
+              <button type="button">Quarto</button>
+              <button type="button">Escritório ou loja</button>
+              <button type="button">Varanda ou área externa</button>
+              <button type="button">Vários ambientes</button>
+            </div>
+          </div>
+
+          <div class="rapido__passo" data-passo="2">
+            <p class="rapido__pergunta">2 de 3 · O que você procura?</p>
+            <div class="rapido__opcoes" data-campo="modelo">
+              <button type="button" data-modelo="Cortina de tecido">Cortina de tecido</button>
+              <button type="button" data-modelo="Cortina de tecido com blackout">Cortina com blackout</button>
+              <button type="button" data-modelo="Cortina rolô">Cortina rolô</button>
+              <button type="button" data-modelo="Persiana horizontal 25 mm">Persiana</button>
+              <button type="button" data-modelo="Cortina motorizada">Cortina motorizada</button>
+              <button type="button" data-modelo="Toldo vertical (tela screen 5%)">Toldo</button>
+              <button type="button" data-modelo="">Ainda não sei</button>
+            </div>
+          </div>
+
+          <div class="rapido__passo" data-passo="3">
+            <p class="rapido__pergunta">3 de 3 · Quantas janelas?</p>
+            <div class="rapido__opcoes" data-campo="janelas">
+              <button type="button" data-min="1" data-max="1">1</button>
+              <button type="button" data-min="2" data-max="2">2</button>
+              <button type="button" data-min="3" data-max="5">3 a 5</button>
+              <button type="button" data-min="6" data-max="0">Mais de 5</button>
+            </div>
+          </div>
+
+          <div class="rapido__resultado" id="rapido-resultado" hidden>
+            <p class="eyebrow">Estimativa inicial</p>
+            <h3 id="rapido-titulo"></h3>
+            <p class="rapido__preco" id="rapido-preco"></p>
+            <p class="sim__note" id="rapido-nota"></p>
+            <p class="rapido__resumo" id="rapido-resumo"></p>
+            <div class="sim__actions">
+              <a class="btn btn--primary btn--lg" id="rapido-whats" href="#" target="_blank" rel="noopener">Agendar visita no WhatsApp</a>
+              <button type="button" class="btn btn--outline btn--lg" id="rapido-medidas">Tenho as medidas</button>
+            </div>
+            <button type="button" class="rapido__refazer" id="rapido-refazer">↺ Refazer simulação</button>
+          </div>
+        </div>
+
         <form class="card form sim__form" id="form-simulador" novalidate>
           <div class="field">
             <label for="sim-modelo">Modelo da cortina</label>
@@ -518,10 +577,23 @@
             <p class="sim__total">Total estimado: <strong id="sim-total">—</strong></p>
             <p class="sim__condicoes" id="sim-total-condicoes" hidden></p>
             <p class="sim__note">Tem mais janelas? Preencha as medidas acima e clique em "Adicionar à lista". Ao enviar, a lista inteira vai em uma única mensagem.</p>
+            <button type="button" class="rapido__refazer" id="sim-refazer">↺ Refazer simulação (limpar a lista)</button>
           </div>
         </form>
+        </div>
       </div>
     </section>
+
+    <!-- Resumo antes de enviar para o WhatsApp -->
+    <dialog class="sim__confirmar" id="sim-confirmar" aria-labelledby="sim-confirmar-titulo">
+      <h3 id="sim-confirmar-titulo">Confira antes de enviar</h3>
+      <p class="sim__note">Esta é a mensagem que vai para o nosso WhatsApp:</p>
+      <pre class="sim__previa" id="sim-previa"></pre>
+      <div class="sim__actions">
+        <button type="button" class="btn btn--outline btn--lg" id="sim-voltar">Voltar e ajustar</button>
+        <button type="button" class="btn btn--primary btn--lg" id="sim-enviar">Enviar pelo WhatsApp</button>
+      </div>
+    </dialog>
 
     <!-- 5. COMO FUNCIONA -->
     <section class="section section--green" id="como-funciona">
@@ -784,7 +856,7 @@
     <div class="container footer__inner">
       <div class="footer__brand">
         <a href="#topo" class="logo logo--light" aria-label="EDD Cortinas, voltar ao início">
-          <img src="img/logo-edd-cortinas.png" alt="EDD Cortinas – Estilo em sua decoração" width="537" height="246" loading="lazy">
+          <img src="img/logo-edd-cortinas-sem-sombra.png" alt="EDD Cortinas – Estilo em sua decoração" width="537" height="246" loading="lazy">
         </a>
         <p>Cortinas e persianas sob medida em Fortaleza e todo o Ceará.</p>
       </div>
@@ -805,6 +877,6 @@
     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 21l1.65-4.95A9 9 0 1 1 8 19.4L3 21z"/><g transform="translate(7.3 7.3) scale(.4)" stroke-width="4"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></g></svg>
   </a>
 
-  <script src="js/main.js?v=27" defer></script>
+  <script src="js/main.js?v=28" defer></script>
 </body>
 </html>
