@@ -28,7 +28,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/style.css?v=27">
+  <link rel="stylesheet" href="css/style.css?v=28">
 
   <!-- Dados estruturados para o Google -->
   <script type="application/ld+json">
@@ -643,7 +643,16 @@
           </a>
         </div>
 
-        <div class="gallery">          <figure class="media gallery__item" data-label="Foto de projeto 1 (img/projeto-01.jpg)">
+        <!-- Filtro por ambiente; "Todos" mostra 12 e o botão "Ver mais projetos" abre o resto -->
+        <div class="gallery__filtros" role="group" aria-label="Filtrar projetos por ambiente">
+          <button type="button" class="gallery__filtro is-ativo" data-filtro="">Todos</button>
+          <button type="button" class="gallery__filtro" data-filtro="sala">Sala</button>
+          <button type="button" class="gallery__filtro" data-filtro="quarto">Quarto</button>
+          <button type="button" class="gallery__filtro" data-filtro="varanda">Varanda</button>
+          <button type="button" class="gallery__filtro" data-filtro="escritorio">Escritório e comércio</button>
+        </div>
+
+        <div class="gallery">          <figure class="media gallery__item" data-ambiente="sala" data-label="Foto de projeto 1 (img/projeto-01.jpg)">
             <img src="img/projeto-01.jpg" alt="Cortina de tecido sobre persiana de madeira, projeto da EDD Cortinas em Fortaleza" loading="lazy">
           </figure>
           <figure class="media gallery__item" data-ambiente="varanda" data-label="Foto de projeto 2 (img/projeto-02.jpg)">
@@ -679,6 +688,36 @@
           <figure class="media gallery__item" data-ambiente="sala" data-label="Foto de projeto 12 (img/projeto-12.jpg)">
             <img src="img/projeto-12.jpg" alt="Persiana horizontal em sala, projeto da EDD Cortinas em Fortaleza" loading="lazy">
           </figure>
+          <figure class="media gallery__item" data-ambiente="quarto" data-label="Foto de projeto 13 (img/projeto-13.jpg)">
+            <img src="img/projeto-13.jpg" alt="Persiana vertical em quarto, projeto da EDD Cortinas em Fortaleza" loading="lazy">
+          </figure>
+          <figure class="media gallery__item" data-ambiente="quarto" data-label="Foto de projeto 14 (img/projeto-14.jpg)">
+            <img src="img/projeto-14.jpg" alt="Persiana vertical em quarto de casal, projeto da EDD Cortinas em Fortaleza" loading="lazy">
+          </figure>
+          <figure class="media gallery__item" data-label="Foto de projeto 15 (img/projeto-15.jpg)">
+            <img src="img/projeto-15.jpg" alt="Cortina romana, projeto da EDD Cortinas em Fortaleza" loading="lazy">
+          </figure>
+          <figure class="media gallery__item" data-label="Foto de projeto 16 (img/projeto-16.jpg)">
+            <img src="img/projeto-16.jpg" alt="Cortina rolô em cozinha, projeto da EDD Cortinas em Fortaleza" loading="lazy">
+          </figure>
+          <figure class="media gallery__item" data-ambiente="sala" data-label="Foto de projeto 17 (img/projeto-17.jpg)">
+            <img src="img/projeto-17.jpg" alt="Cortina rolô em sala de jantar com vista, projeto da EDD Cortinas em Fortaleza" loading="lazy">
+          </figure>
+          <figure class="media gallery__item" data-ambiente="sala" data-label="Foto de projeto 18 (img/projeto-18.jpg)">
+            <img src="img/projeto-18.jpg" alt="Cortina de tecido em sala, projeto da EDD Cortinas em Fortaleza" loading="lazy">
+          </figure>
+          <figure class="media gallery__item" data-label="Foto de projeto 19 (img/projeto-19.jpg)">
+            <img src="img/projeto-19.jpg" alt="Cortina de tecido em espaço de academia, projeto da EDD Cortinas em Fortaleza" loading="lazy">
+          </figure>
+          <figure class="media gallery__item" data-ambiente="escritorio" data-label="Foto de projeto 20 (img/projeto-20.jpg)">
+            <img src="img/projeto-20.jpg" alt="Persiana horizontal em sala de aula, projeto da EDD Cortinas em Fortaleza" loading="lazy">
+          </figure>
+          <figure class="media gallery__item" data-ambiente="escritorio" data-label="Foto de projeto 21 (img/projeto-21.jpg)">
+            <img src="img/projeto-21.jpg" alt="Projeto da EDD Cortinas em restaurante em Fortaleza" loading="lazy">
+          </figure>
+        </div>
+        <div class="gallery__mais">
+          <button type="button" class="btn btn--outline" id="galeria-mais">Ver mais projetos</button>
         </div>
       </div>
     </section>
@@ -695,13 +734,29 @@
           <a href="https://www.google.com/maps?cid=15254970020686312315" class="google-nota" target="_blank" rel="noopener">
             <strong>4,8</strong>
             <span class="google-nota__estrelas" aria-hidden="true">★★★★★</span>
-            <span>15 avaliações no Google</span>
+            <span>19 avaliações no Google</span>
           </a>
           <a href="https://www.google.com/maps?cid=15254970020686312315" class="btn btn--outline btn--sm" target="_blank" rel="noopener">Já é cliente? Avalie a EDD no Google</a>
           </div>
         </div>
 
+        <!-- Avaliações reais do Google, com o texto como o cliente escreveu -->
         <div class="testimonials">
+          <figure class="card testimonial">
+            <span class="testimonial__estrelas" aria-label="5 estrelas">★★★★★</span>
+            <blockquote>Contratei os serviços para instalação de persianas com o Eduardo e além de muito atencioso, cumpri o que promete e tem uns preços acessíveis. Indico os serviços.</blockquote>
+            <figcaption><strong>Francisco Lucas P.</strong><span>Avaliação no Google</span><span class="testimonial__atendente">Atendido por Eduardo</span></figcaption>
+          </figure>
+          <figure class="card testimonial">
+            <span class="testimonial__estrelas" aria-label="5 estrelas">★★★★★</span>
+            <blockquote>A Rachel fez um ótimo atendimento e fiquei satisfeito com minhas cortinas. A entrega foi bem rápida.</blockquote>
+            <figcaption><strong>Ivanildo S.</strong><span>Avaliação no Google</span><span class="testimonial__atendente">Atendido por Rachel</span></figcaption>
+          </figure>
+          <figure class="card testimonial">
+            <span class="testimonial__estrelas" aria-label="5 estrelas">★★★★★</span>
+            <blockquote>Muito bom os valores serviço e qualidade. Preço direto da fábrica.</blockquote>
+            <figcaption><strong>Samuel M.</strong><span>Avaliação no Google</span></figcaption>
+          </figure>
           <figure class="card testimonial">
             <span class="testimonial__estrelas" aria-label="5 estrelas">★★★★★</span>
             <blockquote>Melhor atendimento de Fortaleza, ágil, sem enrolação, material de ponta e de excelente qualidade, super recomendo! Merece 10 estrelas.</blockquote>
@@ -716,6 +771,16 @@
             <span class="testimonial__estrelas" aria-label="5 estrelas">★★★★★</span>
             <blockquote>Entrei em contato com a empresa e em uma semana resolveram meu problema. O pessoal faz tudo para resolver com eficácia a nossa necessidade. Obrigada.</blockquote>
             <figcaption><strong>Fátima S.</strong><span>Avaliação no Google</span></figcaption>
+          </figure>
+          <figure class="card testimonial">
+            <span class="testimonial__estrelas" aria-label="5 estrelas">★★★★★</span>
+            <blockquote>Exatamente, serviço de qualidade. Super recomendo.</blockquote>
+            <figcaption><strong>Andréa V.</strong><span>Avaliação no Google</span></figcaption>
+          </figure>
+          <figure class="card testimonial">
+            <span class="testimonial__estrelas" aria-label="5 estrelas">★★★★★</span>
+            <blockquote>Sou cliente muito satisfeita com o trabalho dessa empresa. Digo e aprovo!</blockquote>
+            <figcaption><strong>Gina F.</strong><span>Avaliação no Google</span></figcaption>
           </figure>
         </div>
       </div>
@@ -877,6 +942,6 @@
     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 21l1.65-4.95A9 9 0 1 1 8 19.4L3 21z"/><g transform="translate(7.3 7.3) scale(.4)" stroke-width="4"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></g></svg>
   </a>
 
-  <script src="js/main.js?v=28" defer></script>
+  <script src="js/main.js?v=29" defer></script>
 </body>
 </html>
