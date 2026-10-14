@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/orcamento.css?v=10">
+  <link rel="stylesheet" href="css/orcamento.css?v=11">
 </head>
 <body class="bloqueado">
   <!-- Login: a página só abre depois de entrar -->
@@ -64,9 +64,14 @@
     </div>
     <div class="salvos__filtros">
       <input type="search" id="busca-orc" placeholder="Buscar por cliente, nº ou bairro" autocomplete="off">
+      <select id="filtro-tipo" aria-label="Filtrar por tipo de documento">
+        <option value="">Orçamentos e pedidos</option>
+        <option value="Orçamento">Só orçamentos</option>
+        <option value="Pedido">Só pedidos</option>
+      </select>
       <select id="filtro-status" aria-label="Filtrar por status">
         <option value="">Todos os status</option>
-        <option>Orçamento</option>
+        <option value="Orçamento">Em aberto</option>
         <option>Aprovado</option>
         <option>Em produção</option>
         <option>Pronto</option>
@@ -198,6 +203,6 @@
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js" defer></script>
-  <script src="js/orcamento.js?v=23" defer></script>
+  <script src="js/orcamento.js?v=24" defer></script>
 </body>
 </html>
