@@ -688,3 +688,37 @@ if (fotosGaleria.length) {
 
 /* ---------- Ano atual no rodapé ---------- */
 document.querySelector("#ano").textContent = new Date().getFullYear();
+
+/* ---------- Galeria: filtro por ambiente e "Ver mais projetos" ---------- */
+const LIMITE_GALERIA = 12;
+const itensGaleria = [...document.querySelectorAll(".gallery__item")];
+const botaoMaisGaleria = document.querySelector("#galeria-mais");
+let filtroGaleria = "";
+let galeriaCompleta = false;
+
+function aplicarFiltroGaleria() {
+  let vistos = 0;
+  itensGaleria.forEach((item) => {
+    const combina = !filtroGaleria || (item.dataset.ambiente || "").split(" ").includes(filtroGaleria);
+    // Em "Todos", só as 12 primeiras até clicar em "Ver mais"; num ambiente, todas as dele
+    const mostra = combina && (filtroGaleria || galeriaCompleta || vistos < LIMITE_GALERIA);
+    if (combina) vistos++;
+    item.classList.toggle("is-filtrado", !mostra);
+    // Foto que aparece depois não espera a animação de entrada
+    if (mostra) item.classList.remove("reveal", "is-visible");
+  });
+  // Esconde a faixa do botão (o .btn tem display próprio e ignoraria o hidden)
+  botaoMaisGaleria.parentElement.hidden = !!filtroGaleria || galeriaCompleta || vistos <= LIMITE_GALERIA;
+}
+document.querySelectorAll(".gallery__filtro").forEach((botao) => {
+  botao.addEventListener("click", () => {
+    document.querySelectorAll(".gallery__filtro").forEach((b) => b.classList.toggle("is-ativo", b === botao));
+    filtroGaleria = botao.dataset.filtro;
+    aplicarFiltroGaleria();
+  });
+});
+botaoMaisGaleria.addEventListener("click", () => {
+  galeriaCompleta = true;
+  aplicarFiltroGaleria();
+});
+aplicarFiltroGaleria();
