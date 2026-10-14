@@ -348,7 +348,7 @@ function itensComModelo(itens) {
 }
 // Coloca na tela um orçamento guardado ({ campos, itens })
 function aplicarDados(r) {
-  form.reset();
+  limparFormulario();
   listaItens.innerHTML = "";
   Object.entries(r.campos || {}).forEach(([k, v]) => {
     const c = form[k];
@@ -367,8 +367,15 @@ function carregarRascunho() {
 function proximoNumero() {
   try { const n = parseInt(localStorage.getItem(CHAVE_ULTIMO), 10); return n ? String(n + 1) : ""; } catch (e) { return ""; }
 }
-function novoOrcamento() {
+// Campo oculto não volta sozinho com o reset: sem isto o novo herdaria dados do anterior
+function limparFormulario() {
   form.reset();
+  form.idServidor.value = "";
+  form.previsaoAuto.value = "1";
+  form.pagamentoAuto.value = "1";
+}
+function novoOrcamento() {
+  limparFormulario();
   listaItens.innerHTML = "";
   form.numero.value = proximoNumero();
   form.data.value = hoje();
@@ -418,19 +425,31 @@ document.querySelector("#add-avulso").addEventListener("click", () => {
   const novo = listaItens.lastElementChild;
   novo.querySelector('[data-campo="descricao"]').focus();
 });
-document.querySelector("#novo").addEventListener("click", () => {
-  if (!confirm("Começar um orçamento novo? O atual sai da tela.")) return;
-  // Se veio de um link, o pedido dele continua guardado; o novo usa o rascunho geral
+// Guarda o que está na tela (se tiver algo) e devolve o número seguinte ao dele
+async function fecharAtual() {
+  const anterior = parseInt(form.numero.value, 10) || 0;
+  await salvarNoServidor({ silencioso: true });
+  // Se veio de um link ou da lista, aquele continua guardado; o novo usa o rascunho geral
   if (chaveRascunho !== CHAVE_RASCUNHO) {
     chaveRascunho = CHAVE_RASCUNHO;
     history.replaceState(null, "", location.pathname);
-    erro.hidden = true;
   }
-  novoOrcamento();
-  // Campo oculto não volta sozinho ao limpar: sem isto o novo salvaria por cima do anterior
-  form.idServidor.value = "";
+  erro.hidden = true;
+  return anterior ? anterior + 1 : 0;
+}
+// Número do novo: o seguinte ao que estava na tela, ou o da sequência do servidor se for maior
+async function numerarNovo(seguinte) {
+  if (seguinte > (parseInt(form.numero.value, 10) || 0)) form.numero.value = String(seguinte);
+  atualizar();
   salvarRascunho();
-  sugerirNumero();
+  await sugerirNumero();
+}
+document.querySelector("#novo").addEventListener("click", async () => {
+  if (!confirm("Começar um orçamento novo? O atual é salvo e sai da tela.")) return;
+  const seguinte = await fecharAtual();
+  novoOrcamento();
+  await numerarNovo(seguinte);
+  window.scrollTo({ top: 0 });
 });
 
 /* ---------- PDF ---------- */
@@ -978,7 +997,8 @@ function desenharLista() {
       avisoLista(res.ok ? `Nº ${o.numero} ${o.arquivado ? "arquivado" : "de volta à lista"}.` : res.erro || "Não deu certo, tente de novo.", res.ok);
       desenharLista();
     });
-    acoes.append(abrir, sel, arquivar);
+    const copiar = botaoLinha("Copiar", () => copiarSalvo(o.id));
+    acoes.append(abrir, copiar, sel, arquivar);
     li.append(titulo, valor, info, acoes);
     listaOrc.appendChild(li);
   });
@@ -1001,6 +1021,24 @@ async function abrirSalvo(id) {
   atualizar();
   painelLista.close();
   aviso(`${form.tipo.value} nº ${form.numero.value} aberto. Depois de alterar, clique em "Salvar".`);
+  window.scrollTo({ top: 0 });
+}
+// Copia um orçamento salvo para um novo, com o próximo número e a data de hoje. O original não muda
+async function copiarSalvo(id) {
+  const r = await api("GET", `/orcamentos/${id}`).catch(() => ({ ok: false, erro: "Sem conexão com o servidor." }));
+  if (!r.ok) { desenharLista(); return avisoLista(r.erro || "Não foi possível copiar."); }
+  const seguinte = await fecharAtual();
+  aplicarDados(r.dados);
+  const origem = form.numero.value;
+  form.idServidor.value = "";
+  form.numero.value = "";
+  form.data.value = hoje();
+  form.validade.value = somarDias(form.data.value, VALIDADE_DIAS);
+  form.previsao.value = "";
+  form.previsaoAuto.value = "1";
+  await numerarNovo(seguinte);
+  painelLista.close();
+  aviso(`Cópia do nº ${origem} aberta como nº ${form.numero.value || "novo"}. Altere o que precisar e clique em "Salvar".`);
   window.scrollTo({ top: 0 });
 }
 
