@@ -390,6 +390,7 @@ document.querySelector("#sim-adicionar").addEventListener("click", () => {
 document.querySelectorAll(".product__sim").forEach((botao) => {
   botao.addEventListener("click", () => {
     sim.modelo.value = botao.dataset.modelo;
+    trocarModo(false);
     atualizarSimulacao();
     document.querySelector("#simulador").scrollIntoView({ behavior: "smooth" });
     setTimeout(() => sim.largura.focus({ preventScroll: true }), 600);
@@ -400,6 +401,7 @@ document.querySelectorAll(".product__sim").forEach((botao) => {
 document.querySelectorAll("[data-simular]").forEach((link) => {
   link.addEventListener("click", () => {
     sim.modelo.value = link.dataset.simular;
+    trocarModo(false);
     atualizarSimulacao();
     setTimeout(() => sim.largura.focus({ preventScroll: true }), 600);
   });
@@ -453,9 +455,18 @@ sim.addEventListener("submit", (e) => {
     .filter((linha) => linha !== null)
     .join("\n");
 
-  window.open(whatsappUrl(texto), "_blank", "noopener");
+  // Mostra o resumo antes de abrir o WhatsApp (o link do pedido vai na mensagem, mas não polui a conferência)
+  textoParaEnviar = texto;
+  simPrevia.textContent = texto.replace(/\n\nLink do pedido[^\n]*$/, "").replace(/\*/g, "");
+  simConfirmar.showModal();
+});
 
-  // Pedido enviado: limpa a lista para o próximo pedido não levar junto os itens deste
+/* ---------- Conferir antes de enviar ---------- */
+const simConfirmar = document.querySelector("#sim-confirmar");
+const simPrevia = document.querySelector("#sim-previa");
+let textoParaEnviar = "";
+
+function limparSimulacao() {
   lista = [];
   salvarLista();
   renderLista();
@@ -464,6 +475,116 @@ sim.addEventListener("submit", (e) => {
   sim.bairro.value = "";
   sim.origem.value = "";
   limparMedidas();
+}
+document.querySelector("#sim-voltar").addEventListener("click", () => simConfirmar.close());
+document.querySelector("#sim-enviar").addEventListener("click", () => {
+  window.open(whatsappUrl(textoParaEnviar), "_blank", "noopener");
+  simConfirmar.close();
+  // Pedido enviado: limpa a lista para o próximo pedido não levar junto os itens deste
+  limparSimulacao();
+});
+document.querySelector("#sim-refazer").addEventListener("click", () => {
+  if (!confirm("Limpar a lista e começar a simulação de novo?")) return;
+  sim.modelo.value = "";
+  limparSimulacao();
+  simErro.hidden = true;
+});
+
+/* ---------- Modo rápido: sem medidas, 3 toques e uma faixa estimada ---------- */
+// Faixa calculada com os mesmos preços do simulador, para uma janela pequena e uma grande
+const JANELA_PEQUENA = { largura: 1.5, altura: 1.5 };
+const JANELA_GRANDE = { largura: 3, altura: 2.6 };
+const rapido = document.querySelector("#sim-rapido");
+const rapidoResultado = document.querySelector("#rapido-resultado");
+const modoMedidas = document.querySelector("#modo-medidas");
+const modoRapido = document.querySelector("#modo-rapido");
+let respostas = {};
+
+function trocarModo(paraRapido) {
+  rapido.hidden = !paraRapido;
+  sim.hidden = paraRapido;
+  // Sem a animação de entrada: o cartão que estava escondido tem de aparecer na hora
+  [rapido, sim].forEach((el) => el.classList.remove("reveal", "is-visible"));
+  [[modoMedidas, !paraRapido], [modoRapido, paraRapido]].forEach(([botao, ativo]) => {
+    botao.classList.toggle("is-ativo", ativo);
+    botao.setAttribute("aria-selected", String(ativo));
+  });
+}
+modoMedidas.addEventListener("click", () => trocarModo(false));
+modoRapido.addEventListener("click", () => trocarModo(true));
+
+function mostrarPasso(n) {
+  rapido.querySelectorAll(".rapido__passo").forEach((p) => p.classList.toggle("is-ativo", Number(p.dataset.passo) === n));
+  rapido.querySelectorAll(".rapido__progresso span").forEach((s, i) => s.classList.toggle("is-feito", i < Math.min(n, 3)));
+  rapidoResultado.hidden = n <= 3;
+}
+
+// Valor de uma peça de um modelo numa medida (mesma conta do simulador, sem opcionais)
+function valorDaPeca(opcao, { largura, altura }) {
+  const preco = parseFloat(opcao.dataset.preco) || 0;
+  const medida = opcao.dataset.calculo === "tecido"
+    ? calcularTecido(largura, altura, parseFloat(opcao.dataset.alturamax) || TECIDO_LARGURA_ROLO).metros
+    : largura * altura;
+  return Math.max(AREA_MINIMA, medida) * preco + (parseFloat(opcao.dataset.acessorios) || 0);
+}
+
+function mostrarEstimativa() {
+  const { ambiente, modelo, rotuloModelo, janelas, min, max } = respostas;
+  const opcao = [...sim.modelo.options].find((o) => o.value === modelo && o.dataset.preco);
+  document.querySelector("#rapido-titulo").textContent = modelo ? `${rotuloModelo} · ${janelas} janela${min > 1 ? "s" : ""}` : "Vamos escolher juntos";
+  const preco = document.querySelector("#rapido-preco");
+  const nota = document.querySelector("#rapido-nota");
+  let faixa = "";
+  if (opcao) {
+    const de = valorDaPeca(opcao, JANELA_PEQUENA) * min;
+    faixa = max ? `${reais.format(de)} a ${reais.format(valorDaPeca(opcao, JANELA_GRANDE) * max)}` : `a partir de ${reais.format(de)}`;
+    preco.textContent = faixa;
+    nota.textContent = `Faixa para janelas de ${numero.format(JANELA_PEQUENA.largura)} x ${numero.format(JANELA_PEQUENA.altura)} m até ${numero.format(JANELA_GRANDE.largura)} x ${numero.format(JANELA_GRANDE.altura)} m. O valor exato sai com as medidas, que conferimos na visita técnica.`;
+  } else {
+    preco.textContent = "Sob consulta";
+    nota.textContent = "Na visita técnica mostramos os modelos e tecidos, medimos as janelas e passamos o valor exato.";
+  }
+  document.querySelector("#rapido-resumo").textContent = [`Ambiente: ${ambiente}`, `Procuro: ${rotuloModelo}`, `Janelas: ${janelas}`].join(" · ");
+  document.querySelector("#rapido-whats").href = whatsappUrl([
+    "Olá, EDD Cortinas! Fiz a simulação rápida no site:",
+    "",
+    `*Ambiente:* ${ambiente}`,
+    `*Procuro:* ${rotuloModelo}`,
+    `*Janelas:* ${janelas}`,
+    faixa ? `*Estimativa inicial:* ${faixa}` : null,
+    "",
+    "Ainda não tenho as medidas. Gostaria de agendar uma visita técnica.",
+  ].filter((l) => l !== null).join("\n"));
+  mostrarPasso(4);
+}
+
+rapido.querySelectorAll(".rapido__opcoes").forEach((grupo) => {
+  grupo.addEventListener("click", (e) => {
+    const botao = e.target.closest("button");
+    if (!botao) return;
+    grupo.querySelectorAll("button").forEach((b) => b.classList.toggle("is-escolhido", b === botao));
+    const campo = grupo.dataset.campo;
+    if (campo === "ambiente") respostas.ambiente = botao.textContent;
+    if (campo === "modelo") { respostas.modelo = botao.dataset.modelo; respostas.rotuloModelo = botao.textContent; }
+    if (campo === "janelas") { respostas.janelas = botao.textContent; respostas.min = Number(botao.dataset.min); respostas.max = Number(botao.dataset.max); }
+    if (campo === "janelas") mostrarEstimativa();
+    else mostrarPasso(campo === "ambiente" ? 2 : 3);
+  });
+});
+
+function refazerRapido() {
+  respostas = {};
+  rapido.querySelectorAll(".is-escolhido").forEach((b) => b.classList.remove("is-escolhido"));
+  mostrarPasso(1);
+}
+document.querySelector("#rapido-refazer").addEventListener("click", refazerRapido);
+mostrarPasso(1);
+// "Tenho as medidas": vai para o simulador completo já com o modelo escolhido
+document.querySelector("#rapido-medidas").addEventListener("click", () => {
+  if (respostas.modelo) sim.modelo.value = respostas.modelo;
+  trocarModo(false);
+  atualizarSimulacao();
+  (respostas.modelo ? sim.largura : sim.modelo).focus();
 });
 
 /* Link que abre a página de orçamento (orcamento.html) já preenchida com os itens.
