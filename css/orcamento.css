@@ -189,3 +189,6 @@ label[hidden] { display: none; }
 .salvos__topo-lista { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
 .salvos__topo-lista .dica { margin: 0; }
 .salvos__renumerar { padding: 6px 14px; font-size: .84rem; }
+/* Apagar (vai para "Desativados") e Restaurar */
+.salvos__acoes .salvos__apagar { color: #a3261b; border-color: #e3b5b0; }
+.salvos__acoes .salvos__apagar:hover { background: #a3261b; border-color: #a3261b; color: #fff; }

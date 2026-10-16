@@ -993,12 +993,13 @@ function desenharLista() {
       palavras.every((p) => texto.includes(p));
   });
   const soma = visiveis.reduce((t, o) => t + (o.total || 0), 0);
+  document.querySelector("#painel-lista h2").textContent = verArquivados ? "Pedidos/orçamentos desativados" : "Meus orçamentos";
   document.querySelector("#lista-resumo").textContent = visiveis.length
     ? `${visiveis.length} ${visiveis.length === 1 ? "item" : "itens"} · ${reais.format(soma)}`
     : "";
   listaOrc.innerHTML = "";
   if (!visiveis.length) {
-    listaOrc.innerHTML = `<li><span class="vazio">${orcamentosSalvos.length ? "Nada encontrado com esse filtro." : 'Nenhum orçamento salvo ainda. Use o botão "Salvar" ou "Baixar PDF".'}</span></li>`;
+    listaOrc.innerHTML = `<li><span class="vazio">${verArquivados && !palavras.length && !tipo && !status ? "Nenhum pedido ou orçamento desativado." : orcamentosSalvos.length ? "Nada encontrado com esse filtro." : 'Nenhum orçamento salvo ainda. Use o botão "Salvar" ou "Baixar PDF".'}</span></li>`;
     return;
   }
   // Separado por mês (o mais recente em cima); dentro do mês, orçamentos e depois pedidos, em ordem crescente
@@ -1046,13 +1047,18 @@ function desenharLista() {
       avisoLista(res.ok ? `Nº ${o.numero}: status "${sel.value}".` : res.erro || "Não deu certo, tente de novo.", res.ok);
       desenharLista();
     });
-    const arquivar = botaoLinha(o.arquivado ? "Desarquivar" : "Arquivar", async () => {
+    // "Apagar" não some de vez: vai para "Desativados", de onde dá para restaurar.
+    // O número continua reservado, para não repetir o de um PDF já enviado
+    const arquivar = botaoLinha(o.arquivado ? "Restaurar" : "Apagar", async () => {
+      const nome = `${o.tipo || "Orçamento"} ${o.numero || ""} (${o.cliente || "sem nome"})`;
+      if (!o.arquivado && !confirm(`Apagar ${nome}?\nEle vai para "Desativados" e pode ser restaurado depois.`)) return desenharLista();
       const res = await api("POST", "/orcamentos/arquivar", { id: o.id, arquivado: !o.arquivado }).catch(() => ({ ok: false }));
       if (res.ok) o.arquivado = !o.arquivado;
-      avisoLista(res.ok ? `Nº ${o.numero} ${o.arquivado ? "arquivado" : "de volta à lista"}.` : res.erro || "Não deu certo, tente de novo.", res.ok);
+      avisoLista(res.ok ? `${nome} ${o.arquivado ? 'apagado. Está em "Desativados".' : "restaurado: voltou para a lista."}` : res.erro || "Não deu certo, tente de novo.", res.ok);
       desenharLista();
     });
     const copiar = botaoLinha("Copiar", () => copiarSalvo(o.id));
+    arquivar.classList.add(o.arquivado ? "salvos__restaurar" : "salvos__apagar");
     acoes.append(abrir, copiar, sel, arquivar);
     li.append(titulo, valor, info, acoes);
     listaOrc.appendChild(li);
