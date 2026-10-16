@@ -31,7 +31,15 @@ const TECIDO_FRANZIDO = 3;
 const CHAVE_RASCUNHO = "edd-orcamento-rascunho";
 // Cada link de pedido tem o próprio rascunho; sem link, usa o rascunho geral
 let chaveRascunho = CHAVE_RASCUNHO;
-const CHAVE_ULTIMO = "edd-orcamento-ultimo-numero";
+
+/* Numeração: ORC 10/26-001 (orçamento) e PED 10/26-001 (pedido); todo mês recomeça do 001.
+   O próximo número vem do servidor, que enxerga os documentos de todos os usuários. */
+const PREFIXO_NUMERO = { "Orçamento": "ORC", "Pedido": "PED" };
+const RE_NUMERO = /^(ORC|PED) (\d{2})\/(\d{2})-(\d+)$/;
+function baseNumero(tipo, data) {
+  const d = /^\d{4}-\d{2}-\d{2}$/.test(data || "") ? data : hoje();
+  return `${PREFIXO_NUMERO[tipo === "Pedido" ? "Pedido" : "Orçamento"]} ${d.slice(5, 7)}/${d.slice(2, 4)}-`;
+}
 
 /* Condições comerciais
    - Validade do orçamento: dias corridos a partir da data
@@ -364,9 +372,6 @@ function aplicarDados(r) {
 function carregarRascunho() {
   try { return JSON.parse(localStorage.getItem(chaveRascunho)); } catch (e) { return null; }
 }
-function proximoNumero() {
-  try { const n = parseInt(localStorage.getItem(CHAVE_ULTIMO), 10); return n ? String(n + 1) : ""; } catch (e) { return ""; }
-}
 // Campo oculto não volta sozinho com o reset: sem isto o novo herdaria dados do anterior
 function limparFormulario() {
   form.reset();
@@ -377,7 +382,7 @@ function limparFormulario() {
 function novoOrcamento() {
   limparFormulario();
   listaItens.innerHTML = "";
-  form.numero.value = proximoNumero();
+  form.numero.value = "";
   form.data.value = hoje();
   form.validade.value = somarDias(form.data.value, VALIDADE_DIAS);
   form.consideracoes.value = CONSIDERACOES_PADRAO;
@@ -388,8 +393,13 @@ function novoOrcamento() {
 form.previsao.addEventListener("input", () => { form.previsaoAuto.value = form.previsao.value ? "" : "1"; });
 // Editou a forma de pagamento: fica como você escreveu. Apagou tudo: volta ao automático
 form.pagamento.addEventListener("input", () => { form.pagamentoAuto.value = form.pagamento.value.trim() ? "" : "1"; });
-// Mudou a data do orçamento: a validade acompanha
-form.data.addEventListener("change", () => { if (form.data.value) form.validade.value = somarDias(form.data.value, VALIDADE_DIAS); });
+// Mudou a data do orçamento: a validade acompanha (e o número, se o mês mudou)
+form.data.addEventListener("change", () => {
+  if (form.data.value) form.validade.value = somarDias(form.data.value, VALIDADE_DIAS);
+  sugerirNumero();
+});
+// Trocou entre orçamento e pedido: cada um tem a sua sequência
+form.tipo.addEventListener("change", () => sugerirNumero());
 
 /* ---------- Máscaras simples ---------- */
 form.telefone.addEventListener("input", () => {
@@ -425,10 +435,8 @@ document.querySelector("#add-avulso").addEventListener("click", () => {
   const novo = listaItens.lastElementChild;
   novo.querySelector('[data-campo="descricao"]').focus();
 });
-// Guarda o que está na tela (se tiver algo) e devolve o número seguinte ao dele
-// A tela é liberada na hora; o envio ao servidor segue por trás
+// Guarda o que está na tela (se tiver algo). A tela é liberada na hora; o envio ao servidor segue por trás
 function fecharAtual() {
-  const anterior = parseInt(form.numero.value, 10) || 0;
   const t = totais();
   const temAlgo = !!form.cliente.value.trim() || t.total > 0;
   let envio = Promise.resolve();
@@ -442,12 +450,12 @@ function fecharAtual() {
     history.replaceState(null, "", location.pathname);
   }
   erro.hidden = true;
-  // Tela vazia não gasta número: o novo fica com o mesmo
-  return { seguinte: temAlgo && anterior ? anterior + 1 : anterior, envio };
+  return { envio };
 }
-// Número do novo: o seguinte ao que estava na tela, ou o da sequência do servidor se for maior
-async function numerarNovo({ seguinte, envio }) {
-  if (seguinte) form.numero.value = String(seguinte);
+// Número do novo: o próximo do mês e do tipo, pedido ao servidor depois que o anterior foi salvo
+// (tela vazia não é salva, então não gasta número)
+async function numerarNovo({ envio }) {
+  form.numero.value = "";
   atualizar();
   salvarRascunho();
   await envio;
@@ -662,7 +670,6 @@ async function gerarPDF() {
 
   const nomeArquivo = `${tipo === "Pedido" ? "Pedido" : "Orcamento"} ${f.numero.value || ""} - ${f.cliente.value || "cliente"}`.replace(/[\\/:*?"<>|]/g, "").trim();
   doc.save(`${nomeArquivo}.pdf`);
-  try { localStorage.setItem(CHAVE_ULTIMO, String(parseInt(f.numero.value, 10) || "")); } catch (e) {}
 }
 
 form.addEventListener("submit", async (e) => {
@@ -769,6 +776,7 @@ let usuarioAtual = "";
 function liberar(adm, usuario) {
   document.body.classList.remove("bloqueado");
   botaoAcessos.hidden = !adm;
+  botaoRenumerar.hidden = !adm;
   usuarioAtual = usuario || "";
   iniciar();
 }
@@ -892,7 +900,7 @@ function aviso(texto, cor = "#0B1D54") {
 }
 function resumoPara(dados, total) {
   const c = dados.campos || {};
-  return { numero: c.numero, tipo: c.tipo, cliente: c.cliente, bairro: c.bairro, total };
+  return { numero: c.numero, tipo: c.tipo, cliente: c.cliente, bairro: c.bairro, data: c.data, total };
 }
 
 // Guarda no servidor o que está na tela. Devolve true se salvou
@@ -910,24 +918,36 @@ async function salvarNoServidor({ silencioso = false } = {}) {
     return false;
   }
   form.idServidor.value = r.id;
-  if (!form.numero.value.trim()) form.numero.value = r.numero;
+  // O servidor pode ter trocado o número (outra pessoa usou o mesmo ao mesmo tempo)
+  if (r.numero) form.numero.value = r.numero;
   salvarRascunho();
   if (!silencioso) aviso(`${form.tipo.value} nº ${form.numero.value} salvo. Ele aparece em "Meus orçamentos" em qualquer aparelho.`);
   return true;
 }
 document.querySelector("#salvar").addEventListener("click", async (e) => {
-  e.currentTarget.disabled = true;
+  // Guarda o botão antes do await: depois dele o evento já não sabe qual botão foi
+  const botao = e.currentTarget;
+  botao.disabled = true;
   await salvarNoServidor();
-  e.currentTarget.disabled = false;
+  botao.disabled = false;
 });
 
-// Sugere o próximo número pela sequência do servidor (só em orçamento novo, ainda não salvo)
+// Sugere o próximo número do mês e do tipo. Só troca um número vazio, ou um número automático
+// de outro mês ou de outro tipo (ex.: mudou de orçamento para pedido). Número antigo ou digitado à mão fica.
 async function sugerirNumero() {
-  if (form.idServidor.value) return;
-  const r = await api("GET", "/proximo-numero").catch(() => null);
-  if (!r || !r.ok || form.idServidor.value) return;
-  const atual = parseInt(form.numero.value, 10) || 0;
-  if (!form.numero.value.trim() || atual < r.numero) { form.numero.value = String(r.numero); salvarRascunho(); }
+  const precisa = () => {
+    const atual = form.numero.value.trim();
+    return !atual || (RE_NUMERO.test(atual) && !atual.startsWith(baseNumero(form.tipo.value, form.data.value)));
+  };
+  if (!precisa()) return;
+  const pedido = `${form.tipo.value}|${form.data.value}`;
+  const p = new URLSearchParams({ tipo: form.tipo.value, data: form.data.value, ignorar: form.idServidor.value });
+  const r = await api("GET", `/proximo-numero?${p}`).catch(() => null);
+  // A resposta chegou depois de outra troca de tipo ou data: vale a mais nova
+  if (!r || !r.ok || !r.numero || pedido !== `${form.tipo.value}|${form.data.value}` || !precisa()) return;
+  form.numero.value = String(r.numero);
+  atualizar();
+  salvarRascunho();
 }
 
 // Primeira vez neste aparelho: manda para o servidor os rascunhos que ficaram guardados aqui
@@ -981,7 +1001,22 @@ function desenharLista() {
     listaOrc.innerHTML = `<li><span class="vazio">${orcamentosSalvos.length ? "Nada encontrado com esse filtro." : 'Nenhum orçamento salvo ainda. Use o botão "Salvar" ou "Baixar PDF".'}</span></li>`;
     return;
   }
+  // Separado por mês (o mais recente em cima); dentro do mês, orçamentos e depois pedidos, em ordem crescente
+  ordenarPorMes(visiveis);
+  let mesAtual = null;
   visiveis.forEach((o) => {
+    if (mesDe(o) !== mesAtual) {
+      mesAtual = mesDe(o);
+      const doMes = visiveis.filter((v) => mesDe(v) === mesAtual);
+      const orcs = doMes.filter((v) => v.tipo !== "Pedido").length;
+      const peds = doMes.length - orcs;
+      const titulo = document.createElement("li");
+      titulo.className = "salvos__mes";
+      titulo.textContent = [nomeMes(mesAtual),
+        orcs ? `${orcs} ${orcs === 1 ? "orçamento" : "orçamentos"}` : "",
+        peds ? `${peds} ${peds === 1 ? "pedido" : "pedidos"}` : ""].filter(Boolean).join(" · ");
+      listaOrc.appendChild(titulo);
+    }
     const li = document.createElement("li");
     if (o.arquivado) li.className = "is-arquivado";
     const titulo = document.createElement("span");
@@ -989,7 +1024,8 @@ function desenharLista() {
     // Nome do cliente em destaque; o tipo vem numa etiqueta, para não confundir pedido com orçamento
     const etiqueta = document.createElement("span");
     etiqueta.className = `salvos__tipo${o.tipo === "Pedido" ? " salvos__tipo--pedido" : ""}`;
-    etiqueta.textContent = `${o.tipo || "Orçamento"} nº ${o.numero || "-"}`;
+    // Número novo já diz o tipo (ORC/PED); número antigo leva o nome do tipo na frente
+    etiqueta.textContent = RE_NUMERO.test(o.numero || "") ? o.numero : `${o.tipo || "Orçamento"} nº ${o.numero || "-"}`;
     titulo.append(etiqueta, document.createTextNode(o.cliente || "sem nome"));
     const valor = document.createElement("span");
     valor.className = "salvos__valor";
@@ -1022,6 +1058,56 @@ function desenharLista() {
     listaOrc.appendChild(li);
   });
 }
+// Mês do documento ("2026-10"): pela data do documento; nos antigos, pelo número ou pela data em que foi salvo
+function mesDe(o) {
+  if (/^\d{4}-\d{2}/.test(o.data || "")) return o.data.slice(0, 7);
+  const m = RE_NUMERO.exec(o.numero || "");
+  if (m) return `20${m[3]}-${m[2]}`;
+  return String(o.atualizado || "").slice(0, 7) || "0000-00";
+}
+function nomeMes(mes) {
+  const [a, m] = mes.split("-").map(Number);
+  if (!a || !m) return "Sem data";
+  const nome = new Date(a, m - 1, 1).toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
+  return nome.charAt(0).toUpperCase() + nome.slice(1);
+}
+function ordenarPorMes(lista) {
+  const seq = (o) => { const m = RE_NUMERO.exec(o.numero || ""); return m ? parseInt(m[4], 10) : parseInt(o.numero, 10) || 0; };
+  const tipo = (o) => (o.tipo === "Pedido" ? 1 : 0);
+  lista.sort((a, b) => mesDe(b).localeCompare(mesDe(a)) || tipo(a) - tipo(b) || seq(a) - seq(b) ||
+    String(a.data || "").localeCompare(String(b.data || "")) || String(a.atualizado).localeCompare(String(b.atualizado)));
+}
+
+/* Reorganizar a numeração dos já salvos (só o administrador): mostra como fica e pede confirmação */
+const botaoRenumerar = document.querySelector("#renumerar");
+botaoRenumerar.addEventListener("click", async () => {
+  botaoRenumerar.disabled = true;
+  avisoLista("Calculando a nova numeração...", true);
+  const previa = await api("POST", "/orcamentos/renumerar", { aplicar: false }).catch(() => ({ ok: false, erro: "Sem conexão com o servidor." }));
+  botaoRenumerar.disabled = false;
+  if (!previa.ok) return avisoLista(previa.erro === "Rota não encontrada." ? "O servidor ainda não foi atualizado para a nova numeração." : previa.erro || "Não deu certo, tente de novo.");
+  if (!previa.mudancas.length) return avisoLista("A numeração já está em ordem. Nada para mudar.", true);
+  const linhas = previa.mudancas.slice(0, 12).map((m) => `${m.de || "(sem nº)"} -> ${m.para}  ${m.cliente}`);
+  if (previa.mudancas.length > 12) linhas.push(`... e mais ${previa.mudancas.length - 12}`);
+  const ok = confirm(`Reorganizar a numeração de ${previa.mudancas.length} de ${previa.total} documentos?\n` +
+    "Cada mês recomeça do 001, separado para orçamento (ORC) e pedido (PED), em ordem de data.\n\n" +
+    linhas.join("\n") +
+    "\n\nAtenção: PDFs que já foram enviados a clientes continuam com o número antigo.");
+  if (!ok) return avisoLista("");
+  botaoRenumerar.disabled = true;
+  avisoLista("Aplicando...", true);
+  const r = await api("POST", "/orcamentos/renumerar", { aplicar: true }).catch(() => ({ ok: false, erro: "Sem conexão com o servidor." }));
+  botaoRenumerar.disabled = false;
+  if (!r.ok) return avisoLista(r.erro || "Não deu certo, tente de novo.");
+  // O documento aberto na tela também recebe o número novo
+  const doAberto = r.mudancas.find((m) => m.id === form.idServidor.value);
+  if (doAberto) { form.numero.value = doAberto.para; atualizar(); salvarRascunho(); }
+  // Um novo ainda não salvo pede outra vez o número, que pode ter sido usado pela reorganização
+  if (!form.idServidor.value && RE_NUMERO.test(form.numero.value.trim())) { form.numero.value = ""; await sugerirNumero(); }
+  await carregarLista();
+  avisoLista(`Pronto: ${r.mudancas.length} ${r.mudancas.length === 1 ? "documento renumerado" : "documentos renumerados"}.`, true);
+});
+
 async function carregarLista() {
   listaOrc.innerHTML = '<li><span class="vazio">Carregando...</span></li>';
   const r = await api("GET", "/orcamentos").catch(() => ({ ok: false, erro: "Sem conexão com o servidor." }));

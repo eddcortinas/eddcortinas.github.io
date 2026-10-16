@@ -183,3 +183,9 @@ label[hidden] { display: none; }
   .topo { padding: 14px 16px; }
   .topo__logo { height: 42px; }
 }
+/* Lista separada por mês e botão de reorganizar a numeração */
+.salvos__lista li.salvos__mes { display: block; padding: 16px 0 6px; border-top: 0; font-family: "Bricolage Grotesque", serif; font-weight: 700; font-size: .95rem; color: var(--azul); }
+.salvos__lista li.salvos__mes:first-child { padding-top: 4px; }
+.salvos__topo-lista { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
+.salvos__topo-lista .dica { margin: 0; }
+.salvos__renumerar { padding: 6px 14px; font-size: .84rem; }
