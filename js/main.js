@@ -722,3 +722,13 @@ botaoMaisGaleria.addEventListener("click", () => {
   aplicarFiltroGaleria();
 });
 aplicarFiltroGaleria();
+
+// Vindo da página de um modelo (/?modelo=Cortina%20rolô#simulador): já deixa o modelo escolhido
+{
+  const modeloUrl = new URLSearchParams(location.search).get("modelo");
+  if (modeloUrl && [...sim.modelo.options].some((o) => o.value === modeloUrl)) {
+    sim.modelo.value = modeloUrl;
+    trocarModo(false);
+    atualizarSimulacao();
+  }
+}
