@@ -154,7 +154,8 @@ function calcularItem(dados) {
   const qtd = Math.max(1, parseInt(dados.qtd, 10) || 1);
   if (!m) return { total: 0, calc: "", medida: "" };
   const manual = lerNumero(dados.unitario);
-  const preco = manual || m.preco;
+  // Preço guardado quando o item foi feito; sem ele (item novo ou orçamento antigo), o da tabela de hoje
+  const preco = manual || lerNumero(dados.precoBase) || m.preco;
 
   if (m.fixo) {
     return { total: preco * qtd, calc: preco ? `${qtd} x ${reais.format(preco)}` : "Informe o valor unitário.", medida: "", preco, qtd };
@@ -223,6 +224,8 @@ function adicionarItem(dados = {}) {
     rotuloDesc.textContent = avulso ? "Nome / descrição do item (aparece no PDF)" : "Descrição (tecido, cor, comando, instalação...)";
   };
   sel.addEventListener("change", ajustarCampos);
+  // Trocou o modelo: o item passa a usar o preço da tabela de hoje para o novo modelo
+  sel.addEventListener("change", () => { el.querySelector('[data-campo="precoBase"]').value = ""; });
   ajustarCampos();
   ["largura", "altura"].forEach((k) => {
     const c = el.querySelector(`[data-campo="${k}"]`);
@@ -282,17 +285,39 @@ function calcularTotais(campos, listaDeItens) {
   };
 }
 
+// Texto do preço como fica guardado no item ("173,91"): lerNumero lê a vírgula como decimal
+const precoParaTexto = (v) => String(Math.round(v * 100) / 100).replace(".", ",");
 function atualizar() {
+  // Item com modelo e ainda sem preço guardado: guarda o da tabela de hoje
+  listaItens.querySelectorAll(".item").forEach((el) => {
+    const m = MODELOS[el.querySelector('[data-campo="modelo"]').value];
+    const base = el.querySelector('[data-campo="precoBase"]');
+    if (m && !m.fixo && !base.value) base.value = precoParaTexto(m.preco);
+    if (!m || m.fixo) base.value = "";
+  });
   const t = totais();
   [...listaItens.querySelectorAll(".item")].forEach((el, i) => {
     const { r, totalAjustado } = t.itens[i];
     // Valor do item = o que vai para o PDF (já com o ajuste interno)
     el.querySelector('[data-campo="total"]').textContent = reais.format(totalAjustado);
-    el.querySelector('[data-campo="calc"]').textContent = r.calc +
-      (t.ajusteInterno && r.total ? ` · sem ajuste: ${reais.format(r.total)}` : "");
     const m = MODELOS[t.itens[i].dados.modelo];
-    el.querySelector('[data-campo="unitario"]').placeholder = m && !m.fixo ? `${reais.format(m.preco)} (auto)` : "valor";
+    const base = lerNumero(t.itens[i].dados.precoBase);
+    const antigo = m && !m.fixo && base && Math.abs(base - m.preco) > 0.005 && !lerNumero(t.itens[i].dados.unitario);
+    el.querySelector('[data-campo="calc"]').textContent = r.calc +
+      (t.ajusteInterno && r.total ? ` · sem ajuste: ${reais.format(r.total)}` : "") +
+      (antigo ? ` · preço de quando foi feito (tabela de hoje: ${reais.format(m.preco)})` : "");
+    el.querySelector('[data-campo="unitario"]').placeholder = m && !m.fixo ? `${reais.format(base || m.preco)} (auto)` : "valor";
   });
+  // Algum item com preço diferente da tabela de hoje: avisa e oferece atualizar
+  const diferentes = t.itens.filter((i) => {
+    const m = MODELOS[i.dados.modelo];
+    const base = lerNumero(i.dados.precoBase);
+    return m && !m.fixo && base && Math.abs(base - m.preco) > 0.005 && !lerNumero(i.dados.unitario);
+  }).length;
+  document.querySelector("#aviso-precos").hidden = !diferentes;
+  document.querySelector("#aviso-precos-texto").textContent = diferentes
+    ? `${diferentes === 1 ? "1 item está" : `${diferentes} itens estão`} com o preço de quando o orçamento foi feito, diferente da tabela de hoje.`
+    : "";
   document.querySelector("#r-subtotal").textContent = reais.format(t.subtotal);
   document.querySelector("#r-frete").textContent = reais.format(t.frete);
   document.querySelector("#r-desconto-rotulo").textContent = t.descontoPct ? `Desconto (${numero.format(t.descontoPct).replace(",00", "")}%)` : "Desconto";
@@ -305,9 +330,19 @@ function atualizar() {
   atualizarDatas(t);
   // Forma de pagamento: texto calculado pelo total, até você editar à mão
   if (form.pagamentoAuto.value === "1") form.pagamento.value = textoPagamentoPadrao(t.total);
-  document.querySelector("#dica-pagamento").textContent = form.pagamentoAuto.value === "1"
+  // Texto editado à mão com valores em R$ que não batem com o total de agora: avisa
+  const p = condicoesPagamento(t.total);
+  const valoresTexto = form.pagamento.value.match(/R\$\s?[\d.]+,\d{2}/g) || [];
+  const atuais = [t.total, p.avista, p.parcela].map((v) => reais.format(v).replace(/\s/g, " "));
+  const desatualizado = form.pagamentoAuto.value !== "1" && t.total && valoresTexto.length &&
+    !valoresTexto.some((v) => atuais.includes(v.replace(/R\$\s?/, "R$ ").replace(/\s/g, " ")));
+  const dicaPag = document.querySelector("#dica-pagamento");
+  dicaPag.classList.toggle("dica--alerta", !!desatualizado);
+  dicaPag.textContent = form.pagamentoAuto.value === "1"
     ? "Preenchido sozinho pelo total. Pode editar à vontade."
-    : "Texto editado por você (não muda mais sozinho). Apague tudo para voltar ao cálculo automático.";
+    : desatualizado
+      ? `Atenção: o total mudou (${reais.format(t.total)}) e os valores deste texto não batem mais. Confira, ou apague tudo para recalcular.`
+      : "Texto editado por você (não muda mais sozinho). Apague tudo para voltar ao cálculo automático.";
   salvarRascunho();
 }
 
@@ -414,7 +449,25 @@ form.cep.addEventListener("input", () => {
   const d = form.cep.value.replace(/\D/g, "").slice(0, 8);
   form.cep.value = d.length > 5 ? `${d.slice(0, 5)}-${d.slice(5)}` : d;
 });
-["frete", "desconto"].forEach((n) => form[n].addEventListener("input", () => soValorEmReais(form[n])));
+form.frete.addEventListener("input", () => soValorEmReais(form.frete));
+// Desconto: em R$ o ponto é milhar ("1.200"); em % o ponto é decimal ("5.5" = 5,5%) e vai até 100
+form.desconto.addEventListener("input", () => {
+  if (form.descontoTipo.value !== "%") return soValorEmReais(form.desconto);
+  soNumerosDecimal(form.desconto);
+  if (lerNumero(form.desconto.value) > 100) form.desconto.value = "100";
+});
+// Trocou R$ <-> %: converte para o mesmo desconto (R$ 50 num subtotal de R$ 1.000 vira 5%)
+let tipoDescontoAnterior = form.descontoTipo.value;
+form.descontoTipo.addEventListener("focus", () => { tipoDescontoAnterior = form.descontoTipo.value; });
+form.descontoTipo.addEventListener("change", () => {
+  const valor = lerNumero(form.desconto.value);
+  const sub = totais().subtotal;
+  if (valor && sub && tipoDescontoAnterior !== form.descontoTipo.value) {
+    const novo = form.descontoTipo.value === "%" ? Math.min(100, valor / sub * 100) : sub * valor / 100;
+    form.desconto.value = numero.format(novo).replace(/\./g, "").replace(/,00$/, "");
+  }
+  tipoDescontoAnterior = form.descontoTipo.value;
+});
 // Ajuste (%): aceita um sinal + ou - no começo e depois só números
 form.descontoPct.addEventListener("input", () => {
   const c = form.descontoPct;
@@ -424,10 +477,21 @@ form.descontoPct.addEventListener("input", () => {
   const v = sinal + resto.value;
   if (v !== c.value) c.value = v;
 });
+// Sem sinal conta como desconto: ao sair do campo, mostra o "-" para não haver dúvida
+form.descontoPct.addEventListener("blur", () => {
+  const c = form.descontoPct;
+  if (/^\d/.test(c.value.trim()) && lerNumero(c.value)) { c.value = "-" + c.value.trim(); atualizar(); }
+});
 
 form.addEventListener("input", atualizar);
 form.addEventListener("change", atualizar);
 document.querySelector("#add-item").addEventListener("click", () => adicionarItem());
+// Passa todos os itens para o preço da tabela de hoje
+document.querySelector("#usar-precos-atuais").addEventListener("click", () => {
+  if (!confirm("Atualizar os itens para os preços da tabela de hoje? O valor do orçamento vai mudar.")) return;
+  listaItens.querySelectorAll('[data-campo="precoBase"]').forEach((c) => { c.value = ""; });
+  atualizar();
+});
 // Item avulso: já vem como "Serviço / outro item" (valor fixo), com o cursor no nome
 document.querySelector("#add-avulso").addEventListener("click", () => {
   const i = MODELOS.findIndex((m) => m.nome === "Serviço / outro item");
@@ -1037,7 +1101,7 @@ function desenharLista() {
 
     const acoes = document.createElement("div");
     acoes.className = "salvos__acoes";
-    const abrir = botaoLinha("Abrir", () => abrirSalvo(o.id));
+    const abrir = botaoLinha("Abrir", () => abrirSalvo(o.id, o.total));
     const sel = document.createElement("select");
     sel.setAttribute("aria-label", "Status");
     sel.innerHTML = STATUS.map((s) => `<option value="${s}"${s === o.status ? " selected" : ""}>${s === "Orçamento" ? "Em aberto" : s}</option>`).join("");
@@ -1122,7 +1186,7 @@ async function carregarLista() {
   desenharLista();
 }
 // Abre um orçamento salvo: ele passa a ter o próprio rascunho neste aparelho
-async function abrirSalvo(id) {
+async function abrirSalvo(id, totalSalvo) {
   const r = await api("GET", `/orcamentos/${id}`).catch(() => ({ ok: false, erro: "Sem conexão com o servidor." }));
   if (!r.ok) { desenharLista(); return avisoLista(r.erro || "Não foi possível abrir."); }
   chaveRascunho = `${CHAVE_RASCUNHO}-s-${id}`;
@@ -1132,6 +1196,13 @@ async function abrirSalvo(id) {
   atualizar();
   painelLista.close();
   aviso(`${form.tipo.value} nº ${form.numero.value} aberto. Depois de alterar, clique em "Salvar".`);
+  // Orçamento salvo antes de os itens guardarem o preço: recalculado com a tabela de hoje pode dar outro total
+  const agora = totais().total;
+  if (totalSalvo && Math.abs(agora - totalSalvo) > 0.01) {
+    aviso(`Atenção: este ${form.tipo.value.toLowerCase()} foi salvo com total de ${reais.format(totalSalvo)}, ` +
+      `mas com a tabela de preços de hoje deu ${reais.format(agora)}. Confira os valores dos itens antes de enviar ` +
+      `(se precisar, use o "Valor unitário" de cada item).`, "#a3261b");
+  }
   window.scrollTo({ top: 0 });
 }
 // Copia um orçamento salvo para um novo, com o próximo número e a data de hoje. O original não muda
@@ -1147,6 +1218,8 @@ async function copiarSalvo(id) {
   form.validade.value = somarDias(form.data.value, VALIDADE_DIAS);
   form.previsao.value = "";
   form.previsaoAuto.value = "1";
+  // A cópia é um orçamento novo, de hoje: usa os preços da tabela de hoje
+  listaItens.querySelectorAll('[data-campo="precoBase"]').forEach((c) => { c.value = ""; });
   await numerarNovo(fechado);
   painelLista.close();
   aviso(`Cópia do nº ${origem} aberta como nº ${form.numero.value || "novo"}. Altere o que precisar e clique em "Salvar".`);

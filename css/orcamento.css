@@ -192,3 +192,8 @@ label[hidden] { display: none; }
 /* Apagar (vai para "Desativados") e Restaurar */
 .salvos__acoes .salvos__apagar { color: #a3261b; border-color: #e3b5b0; }
 .salvos__acoes .salvos__apagar:hover { background: #a3261b; border-color: #a3261b; color: #fff; }
+/* Avisos de preço e de texto de pagamento desatualizado */
+.dica--alerta { color: #a3261b; font-weight: 600; }
+.aviso-precos { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin: 10px 0 0; padding: 10px 14px; border-radius: 12px; background: #fff4e5; color: #7a3d00; font-size: .9rem; font-weight: 600; }
+.aviso-precos[hidden] { display: none; }
+.aviso-precos .btn { padding: 6px 14px; font-size: .84rem; }

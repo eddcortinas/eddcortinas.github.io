@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/orcamento.css?v=13">
+  <link rel="stylesheet" href="css/orcamento.css?v=14">
 </head>
 <body class="bloqueado">
   <!-- Login: a página só abre depois de entrar -->
@@ -137,6 +137,10 @@
           <span class="dica">Medidas em metros (2,50), centímetros (250) ou milímetros (2500).</span>
         </div>
         <div id="itens"></div>
+        <p class="aviso-precos" id="aviso-precos" hidden>
+          <span id="aviso-precos-texto"></span>
+          <button type="button" class="btn btn--linha" id="usar-precos-atuais">Usar os preços de hoje</button>
+        </p>
         <div class="itens__botoes">
           <button type="button" class="btn btn--linha" id="add-item">+ Adicionar item</button>
           <button type="button" class="btn btn--linha" id="add-avulso">+ Item avulso (nome e valor)</button>
@@ -157,9 +161,9 @@
               </select>
             </span>
           </label>
-          <label>Ajuste interno (%)<input name="descontoPct" maxlength="6" autocomplete="off" placeholder="-10 ou +10"></label>
+          <label>Ajuste interno (%)<input name="descontoPct" maxlength="6" autocomplete="off" inputmode="text" placeholder="-10 ou +10"></label>
         </div>
-        <p class="dica" id="dica-ajuste">O ajuste interno entra no preço de cada item e não aparece no PDF.</p>
+        <p class="dica" id="dica-ajuste">O ajuste interno entra no preço de cada item e não aparece no PDF. Use -10 para baixar 10% ou +10 para aumentar 10%.</p>
         <label>Forma de pagamento (aparece no PDF)<textarea name="pagamento" rows="2" placeholder="Ex.: 50% de entrada e 50% na instalação."></textarea></label>
         <!-- "1" = texto calculado sozinho pelo total; vira "" se você editar. Apagou tudo: volta ao automático -->
         <input type="hidden" name="pagamentoAuto" value="1">
@@ -197,6 +201,8 @@
         <label class="item__guia" hidden><input type="checkbox" data-campo="guia"> Com guia</label>
         <label class="col-3"><span class="item__desc-rotulo">Descrição (tecido, cor, comando, instalação...)</span><input data-campo="descricao"></label>
         <label>Valor unitário<input data-campo="unitario" inputmode="decimal" placeholder="automático"></label>
+        <!-- Preço da tabela quando o item foi feito: reabrir o orçamento depois não muda o valor -->
+        <input type="hidden" data-campo="precoBase">
         <label>Valor do item<output data-campo="total">R$ 0,00</output></label>
       </div>
       <p class="item__calc" data-campo="calc"></p>
@@ -206,6 +212,6 @@
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js" defer></script>
-  <script src="js/orcamento.js?v=27" defer></script>
+  <script src="js/orcamento.js?v=28" defer></script>
 </body>
 </html>
