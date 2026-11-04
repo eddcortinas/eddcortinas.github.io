@@ -47,7 +47,7 @@ function baseNumero(tipo, data) {
    - Pagamento: à vista com desconto, ou cartão em parcelas sem juros sobre o total cheio */
 const VALIDADE_DIAS = 15;
 const DIAS_INSTALACAO = 2;
-const PAGAMENTO = { descontoAvista: 6, parcelas: 8 };
+const PAGAMENTO = { descontoAvista: 5, parcelas: 6 };
 
 // Datas no formato do campo (AAAA-MM-DD), sem passar por UTC
 const paraData = (iso) => { const [a, m, d] = iso.split("-").map(Number); return new Date(a, m - 1, d); };

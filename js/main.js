@@ -170,7 +170,7 @@ const simTotalCondicoes = document.querySelector("#sim-total-condicoes");
 /* Condições comerciais (mostradas na estimativa e na mensagem)
    À vista: desconto sobre o total. Cartão: parcelas sem juros sobre o total cheio.
    Prazo: dias úteis de produção do modelo (data-prazo) + dias de instalação. */
-const PAGAMENTO = { descontoAvista: 6, parcelas: 8 };
+const PAGAMENTO = { descontoAvista: 5, parcelas: 6 };
 const DIAS_INSTALACAO = 2;
 const textoPagamento = (valor) =>
   `À vista: <strong>${reais.format(valor * (1 - PAGAMENTO.descontoAvista / 100))}</strong> (${PAGAMENTO.descontoAvista}% de desconto) ou ` +
