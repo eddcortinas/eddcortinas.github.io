@@ -211,9 +211,49 @@ function calcularTecido(largura, altura, alturaRolo = TECIDO_LARGURA_ROLO) {
   };
 }
 
+/* Categorias do modelo, cada uma com seu preço e suas cores (mesmo preço para todas as cores):
+   data-categorias="Pinpoint=240.00 (Branco, Cinza, Preto); Screen 3%=250.00 (Branco, Bege)".
+   Aceita vírgula ou ponto no preço. Modelo sem data-categorias devolve lista vazia. */
+function lerCategorias(opcao) {
+  if (!opcao || !opcao.dataset.categorias) return [];
+  return opcao.dataset.categorias.split(";").map((parte) => {
+    const r = parte.trim().match(/^(.+?)\s*=\s*([\d.,]+)\s*(?:\((.*)\))?$/);
+    if (!r) return null;
+    const cores = (r[3] || "").split(",").map((c) => c.trim()).filter(Boolean);
+    return { nome: r[1].trim(), preco: parseFloat(r[2].replace(",", ".")) || 0, cores };
+  }).filter((c) => c && c.nome && c.preco);
+}
+const camposCategoria = document.querySelector("#sim-categoria-campos");
+const campoCorTabela = document.querySelector("#sim-cor-tabela-campo");
+const opcaoTexto = (valor, texto) => { const o = document.createElement("option"); o.value = valor; o.textContent = texto; return o; };
+let categoriasDoModelo = null; // modelo cujas categorias estão no seletor agora
+let coresDaCategoria = null; // modelo|coleção cujas cores estão no seletor agora
+// Mostra as categorias do modelo escolhido e as cores da categoria escolhida
+function preencherCategorias() {
+  const opcao = sim.modelo.selectedOptions[0];
+  const categorias = lerCategorias(opcao);
+  if (categoriasDoModelo !== opcao) {
+    categoriasDoModelo = opcao;
+    const un = opcao && opcao.dataset.calculo === "tecido" ? "m" : "m²";
+    sim.categoria.replaceChildren(...(categorias.length ? [opcaoTexto("", "Escolha a coleção")] : []),
+      ...categorias.map((c) => opcaoTexto(c.nome, `${c.nome} – ${reais.format(c.preco)}/${un}`)));
+    camposCategoria.hidden = !categorias.length;
+  }
+  const cat = categorias.find((c) => c.nome === sim.categoria.value);
+  // Só refaz a lista de cores quando muda o modelo ou a coleção (senão a cor escolhida se perderia)
+  const chave = cat ? `${sim.modelo.value}|${cat.nome}` : "";
+  if (coresDaCategoria !== chave) {
+    coresDaCategoria = chave;
+    const cores = cat ? cat.cores : [];
+    sim.corTabela.replaceChildren(...(cores.length ? [opcaoTexto("", "Escolha a cor")] : []), ...cores.map((c) => opcaoTexto(c, c)));
+    campoCorTabela.hidden = !cores.length;
+  }
+}
+
 function calcularSimulacao() {
   const opcao = sim.modelo.selectedOptions[0];
-  const preco = opcao && opcao.dataset.preco ? parseFloat(opcao.dataset.preco) : 0;
+  const categoria = lerCategorias(opcao).find((c) => c.nome === sim.categoria.value);
+  const preco = categoria ? categoria.preco : opcao && opcao.dataset.preco ? parseFloat(opcao.dataset.preco) : 0;
   const porTecido = !!(opcao && opcao.dataset.calculo === "tecido");
   const largura = lerMedida(sim.largura.value);
   const altura = lerMedida(sim.altura.value);
@@ -252,6 +292,8 @@ function calcularSimulacao() {
     comando: sim.comando.value,
     instalacao: sim.instalacao.value,
     cor: sim.cor.value.trim(),
+    categoria: categoria ? categoria.nome : "",
+    corTabela: categoria && categoria.cores.includes(sim.corTabela.value) ? sim.corTabela.value : "",
   };
 }
 
@@ -279,6 +321,7 @@ function atualizarSimulacao() {
   // A opção de guia só aparece nos modelos que têm guia
   const opcao = sim.modelo.selectedOptions[0];
   const temGuia = !!(opcao && opcao.dataset.guia);
+  preencherCategorias();
   campoGuia.hidden = !temGuia;
   if (!temGuia) sim.guia.checked = false;
   const s = calcularSimulacao();
@@ -312,7 +355,7 @@ function validarSimulacao(s) {
   return true;
 }
 
-const detalhes = (s) => [s.guia && "com guia", s.acionamento, s.comando && `comando ${s.comando.toLowerCase()}`, s.instalacao, s.cor].filter(Boolean);
+const detalhes = (s) => [s.categoria && `coleção ${s.categoria}`, s.corTabela && `cor ${s.corTabela.toLowerCase()}`, s.guia && "com guia", s.acionamento, s.comando && `comando ${s.comando.toLowerCase()}`, s.instalacao, s.cor].filter(Boolean);
 
 function renderLista() {
   simLista.hidden = lista.length === 0;
@@ -601,6 +644,8 @@ function linkOrcamento(itens, cliente = {}) {
     h: s.altura,
     q: s.qtd,
     g: s.guia ? 1 : 0,
+    ...(s.categoria ? { k: s.categoria } : {}),
+    ...(s.corTabela ? { c: s.corTabela } : {}),
     d: [s.acionamento, s.comando && `comando ${s.comando.toLowerCase()}`, s.instalacao, s.cor].filter(Boolean).join(", "),
   }));
   const json = JSON.stringify(dados);
