@@ -132,6 +132,7 @@ async function carregarModelos() {
         acessoriosNome: op.dataset.acessoriosNome || "acessórios",
         guia: parseFloat(op.dataset.guia) || 0,
         prazo: parseInt(op.dataset.prazo, 10) || 0,
+        categorias: lerCategorias(op.dataset.categorias),
       });
     });
   } catch (e) {
@@ -140,6 +141,22 @@ async function carregarModelos() {
   MODELOS.push({ nome: "Kit instalação", grupo: "Outros (valor fixo)", preco: 0, fixo: true });
   MODELOS.push({ nome: "Serviço / outro item", grupo: "Outros (valor fixo)", preco: 0, fixo: true });
 }
+
+/* Categorias do modelo (data-categorias no index.html), cada uma com seu preço e suas cores:
+   "Pinpoint=240.00 (Branco, Cinza, Preto); Screen 3%=250.00 (Branco, Bege)".
+   Todas as cores de uma categoria têm o mesmo preço. */
+function lerCategorias(texto) {
+  if (!texto) return [];
+  return texto.split(";").map((parte) => {
+    const r = parte.trim().match(/^(.+?)\s*=\s*([\d.,]+)\s*(?:\((.*)\))?$/);
+    if (!r) return null;
+    const cores = (r[3] || "").split(",").map((c) => c.trim()).filter(Boolean);
+    return { nome: r[1].trim(), preco: parseFloat(r[2].replace(",", ".")) || 0, cores };
+  }).filter((c) => c && c.nome && c.preco);
+}
+const categoriaDe = (m, nome) => (m && m.categorias ? m.categorias.find((c) => c.nome === nome) : null);
+// Preço da tabela de hoje: o da categoria escolhida ou, sem categoria, o preço base do modelo
+const precoTabela = (m, categoria) => { const c = categoriaDe(m, categoria); return c ? c.preco : m.preco; };
 
 function opcoesModelo() {
   const grupos = {};
@@ -155,7 +172,7 @@ function calcularItem(dados) {
   if (!m) return { total: 0, calc: "", medida: "" };
   const manual = lerNumero(dados.unitario);
   // Preço guardado quando o item foi feito; sem ele (item novo ou orçamento antigo), o da tabela de hoje
-  const preco = manual || lerNumero(dados.precoBase) || m.preco;
+  const preco = manual || lerNumero(dados.precoBase) || precoTabela(m, dados.categoria);
 
   if (m.fixo) {
     return { total: preco * qtd, calc: preco ? `${qtd} x ${reais.format(preco)}` : "Informe o valor unitário.", medida: "", preco, qtd };
@@ -211,6 +228,33 @@ function adicionarItem(dados = {}) {
     if (campo && campo.type === "checkbox") campo.checked = !!v;
     else if (campo && "value" in campo && campo.tagName !== "OUTPUT") campo.value = v;
   });
+  // Categoria e cor conforme o modelo (e a cor conforme a categoria)
+  const selCat = el.querySelector('[data-campo="categoria"]');
+  const selCor = el.querySelector('[data-campo="cor"]');
+  const opcao = (valor, texto) => { const o = document.createElement("option"); o.value = valor; o.textContent = texto; return o; };
+  const preencherCores = (manter) => {
+    const c = categoriaDe(MODELOS[sel.value], selCat.value);
+    const cores = c ? c.cores : [];
+    selCor.replaceChildren(opcao("", cores.length ? "Escolha" : "-"), ...cores.map((cor) => opcao(cor, cor)));
+    // Cor guardada que saiu da tabela: continua aparecendo para não sumir do orçamento
+    if (manter && !cores.includes(manter)) selCor.appendChild(opcao(manter, manter));
+    selCor.value = manter || "";
+    selCor.closest("label").hidden = !cores.length && !manter;
+  };
+  const preencherCategorias = (manterCat, manterCor) => {
+    const m = MODELOS[sel.value];
+    const cats = m && m.categorias ? m.categorias : [];
+    const un = m && m.calculo === "tecido" ? "m" : "m²";
+    selCat.replaceChildren(opcao("", cats.length ? "Escolha" : "-"), ...cats.map((c) => opcao(c.nome, `${c.nome} (${reais.format(c.preco)}/${un})`)));
+    if (manterCat && !categoriaDe(m, manterCat)) selCat.appendChild(opcao(manterCat, manterCat));
+    selCat.value = manterCat || "";
+    selCat.closest("label").hidden = !cats.length && !manterCat;
+    preencherCores(manterCor);
+  };
+  preencherCategorias(dados.categoria, dados.cor);
+  sel.addEventListener("change", () => preencherCategorias());
+  // Trocou a categoria: passa a usar o preço dela na tabela de hoje
+  selCat.addEventListener("change", () => { el.querySelector('[data-campo="precoBase"]').value = ""; preencherCores(); });
   // Campos conforme o modelo: guia só na rolô; item de valor fixo (avulso) não tem medidas
   const caixaGuia = el.querySelector(".item__guia");
   const medidas = el.querySelectorAll(".item__medida");
@@ -292,7 +336,8 @@ function atualizar() {
   listaItens.querySelectorAll(".item").forEach((el) => {
     const m = MODELOS[el.querySelector('[data-campo="modelo"]').value];
     const base = el.querySelector('[data-campo="precoBase"]');
-    if (m && !m.fixo && !base.value) base.value = precoParaTexto(m.preco);
+    const cat = el.querySelector('[data-campo="categoria"]').value;
+    if (m && !m.fixo && !base.value) base.value = precoParaTexto(precoTabela(m, cat));
     if (!m || m.fixo) base.value = "";
   });
   const t = totais();
@@ -302,17 +347,18 @@ function atualizar() {
     el.querySelector('[data-campo="total"]').textContent = reais.format(totalAjustado);
     const m = MODELOS[t.itens[i].dados.modelo];
     const base = lerNumero(t.itens[i].dados.precoBase);
-    const antigo = m && !m.fixo && base && Math.abs(base - m.preco) > 0.005 && !lerNumero(t.itens[i].dados.unitario);
+    const tabela = m && !m.fixo ? precoTabela(m, t.itens[i].dados.categoria) : 0;
+    const antigo = m && !m.fixo && base && Math.abs(base - tabela) > 0.005 && !lerNumero(t.itens[i].dados.unitario);
     el.querySelector('[data-campo="calc"]').textContent = r.calc +
       (t.ajusteInterno && r.total ? ` · sem ajuste: ${reais.format(r.total)}` : "") +
-      (antigo ? ` · preço de quando foi feito (tabela de hoje: ${reais.format(m.preco)})` : "");
-    el.querySelector('[data-campo="unitario"]').placeholder = m && !m.fixo ? `${reais.format(base || m.preco)} (auto)` : "valor";
+      (antigo ? ` · preço de quando foi feito (tabela de hoje: ${reais.format(tabela)})` : "");
+    el.querySelector('[data-campo="unitario"]').placeholder = m && !m.fixo ? `${reais.format(base || tabela)} (auto)` : "valor";
   });
   // Algum item com preço diferente da tabela de hoje: avisa e oferece atualizar
   const diferentes = t.itens.filter((i) => {
     const m = MODELOS[i.dados.modelo];
     const base = lerNumero(i.dados.precoBase);
-    return m && !m.fixo && base && Math.abs(base - m.preco) > 0.005 && !lerNumero(i.dados.unitario);
+    return m && !m.fixo && base && Math.abs(base - precoTabela(m, i.dados.categoria)) > 0.005 && !lerNumero(i.dados.unitario);
   }).length;
   document.querySelector("#aviso-precos").hidden = !diferentes;
   document.querySelector("#aviso-precos-texto").textContent = diferentes
@@ -633,7 +679,9 @@ async function gerarPDF() {
     const m = MODELOS[dados.modelo];
     // Item de valor fixo com descrição: a própria descrição vira o título (sem "SERVIÇO / OUTRO ITEM")
     const titulo = m.fixo && dados.descricao ? "" : m.nome.toUpperCase();
-    const desc = [titulo, m.guia && dados.guia && "Com guia", dados.descricao, !ocultarMedidas && r.medida].filter(Boolean).join("\n");
+    // Coleção e cor logo abaixo do modelo: "Coleção Screen 3% - cor branco"
+    const catCor = [dados.categoria && `Coleção ${dados.categoria}`, dados.cor && `cor ${dados.cor.toLowerCase()}`].filter(Boolean).join(" - ");
+    const desc = [titulo, catCor, m.guia && dados.guia && "Com guia", dados.descricao, !ocultarMedidas && r.medida].filter(Boolean).join("\n");
     // Preço já com o ajuste interno embutido
     return [txt(dados.ambiente || "-"), txt(desc), String(r.qtd || 1), txt(reais.format(totalAjustado))];
   });
@@ -789,6 +837,8 @@ function carregarPedido(pedido) {
       altura: p.h ? numero.format(p.h) : "",
       qtd: String(p.q || 1),
       guia: p.g ? "1" : "",
+      categoria: p.k || "",
+      cor: p.c || "",
       descricao: p.d || (indice < 0 && p.m ? p.m : ""),
     });
   });
