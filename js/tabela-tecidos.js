@@ -127,5 +127,32 @@ const TABELA_TECIDOS = {
     "adicionais": [
       { "id": "premium", "nome": "Kit Premium (acessórios bege, cinza, preto ou marrom)", "pdf": "Kit Premium", "pct": 10 }
     ]
+  },
+  /* Cortinas em tecido (preço por metro de tecido). Metragem = largura do vão x franzido
+     (3,00 nos linhos, 2,50 no Acortinado BK). Até 2,65 m de altura o tecido vai invertido (sem emendas);
+     acima disso vai em pé com emendas (panos) e o gerador avisa para confirmar. Cor = código Emteco + nome. */
+  "Cortina de tecido": {
+    "rotulo": "Tecido",
+    "franzido": 3.0,
+    "alturaInvertido": 2.65,
+    "colecoes": [
+      { "nome": "Linho Flame", "cores": ["774 Prata", "775 Off White", "776 Grafite", "777 Fendy", "822 Cinza", "848 Branco", "849 Bege"], "precos": [100.00] },
+      { "nome": "Linho Flame Irlandês", "cores": ["987 Bege 04", "988 Trigo 09", "989 Cinza 03", "990 Marfim 02", "991 Branco 01", "992 Prata 06"], "precos": [100.00] },
+      { "nome": "Linho Nix", "cores": ["769 Off White", "770 Cru", "771 Castor"], "precos": [124.00] },
+      { "nome": "Linho Safira", "cores": ["772 Safira 02"], "precos": [129.00] },
+      { "nome": "Linho Israelense", "cores": ["773 Cinza"], "precos": [129.00] },
+      { "nome": "Linho Bora Bora", "cores": ["850 Cru"], "precos": [143.00] },
+      { "nome": "Linho Roma", "cores": ["714 Marfim", "767 Bege"], "precos": [159.00] },
+      { "nome": "Linho Absoluto", "cores": ["851 Off White", "852 Fendy (K2407-5A C#3)"], "precos": [215.00] },
+      { "nome": "Linho Botone", "cores": ["1088 Off White", "1089 Bege"], "precos": [240.00] }
+    ]
+  },
+  "Cortina de tecido com blackout": {
+    "rotulo": "Tecido",
+    "franzido": 2.5,
+    "alturaInvertido": 2.65,
+    "colecoes": [
+      { "nome": "Acortinado BK", "cores": ["858 Linho Branco", "878 Indonésia Linho (2210 C#3)"], "precos": [254.00] }
+    ]
   }
 };

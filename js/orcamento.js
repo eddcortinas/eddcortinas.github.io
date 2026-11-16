@@ -186,7 +186,7 @@ function textoTecido(m, dados) {
   const v = m && m.tabela && m.tabela.variante;
   const opcao = c && v ? v.opcoes[varianteUsada(m, dados)] : "";
   return [
-    dados.categoria && `Coleção ${dados.categoria}`,
+    dados.categoria && (m && m.tabela && m.tabela.rotulo === "Tecido" ? dados.categoria : `Coleção ${dados.categoria}`),
     opcao && (v.rotulo === "Tubo" ? `tubo ${opcao}` : opcao),
     dados.cor && `cor ${/^\d/.test(dados.cor) ? dados.cor : dados.cor.toLowerCase()}`,
   ].filter(Boolean).join(" - ");
@@ -226,7 +226,23 @@ function calcularItem(dados) {
   let real = largura * altura;
   let un = "m²";
   let extra = "";
-  if (m.calculo === "tecido") {
+  let avisoTecido = "";
+  if (m.calculo === "tecido" && colecao) {
+    // Tabela de tecidos: franzido da linha (3,00 linhos / 2,50 Acortinado BK); até 2,65 m vai invertido
+    un = "m";
+    const franzido = m.tabela.franzido || TECIDO_FRANZIDO;
+    const limite = m.tabela.alturaInvertido || m.alturamax;
+    const larguraTecido = largura * franzido;
+    if (altura <= limite + 1e-9) {
+      real = larguraTecido;
+      extra = `${numero.format(largura)} x ${numero.format(franzido)}, tecido invertido`;
+    } else {
+      const panos = Math.ceil(larguraTecido / m.alturamax - 1e-9);
+      real = panos * altura;
+      extra = `tecido em pé com emendas, ${panos} pano(s) x ${numero.format(altura)} m`;
+      avisoTecido = `altura acima de ${numero.format(limite)} m: não dá para inverter o tecido, confirme com o cliente`;
+    }
+  } else if (m.calculo === "tecido") {
     un = "m";
     const larguraTecido = largura * TECIDO_FRANZIDO;
     if (altura <= m.alturamax) {
@@ -262,6 +278,7 @@ function calcularItem(dados) {
     if (colecao.larguraMax && largura > colecao.larguraMax + 1e-9) avisos.push(`largura acima da máxima da coleção (${numero.format(colecao.larguraMax)} m)`);
     if (m.tabela.areaMaxima && real > m.tabela.areaMaxima + 1e-9) avisos.push(`área acima da máxima do modelo (${numero.format(m.tabela.areaMaxima)} m²)`);
     if (v && v.automatica && dados.variante === v.opcoes[0] && (real > 3.2 || largura > 2)) avisos.push("acima de 3,20 m² ou 2,00 m de largura use R38");
+    if (avisoTecido) avisos.push(avisoTecido);
     if (avisos.length) partes.push(`· ATENÇÃO: ${avisos.join("; ")}`);
   }
 
@@ -307,6 +324,7 @@ function adicionarItem(dados = {}) {
     if (manterCat && !colecaoDe(m, manterCat)) selCat.appendChild(opcao(manterCat, manterCat));
     selCat.value = manterCat || "";
     selCat.closest("label").hidden = !cats.length && !manterCat;
+    el.querySelector(".item__categoria-rotulo").textContent = (t && t.rotulo) || "Coleção";
     // Opção: tubo na rolô (com "Automático") ou número de vias no painel
     const v = t && t.variante;
     el.querySelector(".item__variante-rotulo").textContent = v ? v.rotulo : "Opção";
@@ -347,7 +365,16 @@ function adicionarItem(dados = {}) {
     const avulso = !!(m && m.fixo);
     medidas.forEach((l) => { l.hidden = avulso; });
     rotuloDesc.textContent = avulso ? "Nome / descrição do item (aparece no PDF)" : "Descrição (tecido, cor, comando, instalação...)";
+    el.classList.toggle("item--avulso", avulso);
+    ajustarPainelTecido();
   };
+  // Quadro "Tecido e acabamento": some quando o modelo não tem nada para escolher ali
+  const painelTecido = el.querySelector(".item__tecido");
+  const ajustarPainelTecido = () => {
+    painelTecido.hidden = [".item__categoria", ".item__variante", ".item__cor", ".item__adicionais", ".item__guia"]
+      .every((s) => el.querySelector(s).hidden);
+  };
+  selCat.addEventListener("change", ajustarPainelTecido);
   sel.addEventListener("change", ajustarCampos);
   ajustarCampos();
   ["largura", "altura"].forEach((k) => {
@@ -430,6 +457,11 @@ function atualizar() {
     const { r, totalAjustado } = t.itens[i];
     // Valor do item = o que vai para o PDF (já com o ajuste interno)
     el.querySelector('[data-campo="total"]').textContent = reais.format(totalAjustado);
+    // Topo do item: número e "Ambiente · Modelo" para achar o item fácil na lista
+    el.querySelector(".item__num").textContent = i + 1;
+    const mod = MODELOS[t.itens[i].dados.modelo];
+    el.querySelector(".item__titulo").textContent =
+      [String(t.itens[i].dados.ambiente || "").trim(), mod && mod.nome].filter(Boolean).join(" · ") || "Novo item";
     const m = MODELOS[t.itens[i].dados.modelo];
     const base = lerNumero(t.itens[i].dados.precoBase);
     const tabela = m && !m.fixo ? precoTabela(m, t.itens[i].dados) : 0;
@@ -1117,6 +1149,7 @@ async function salvarNoServidor({ silencioso = false } = {}) {
     return false;
   }
   form.idServidor.value = r.id;
+  carregarClientes(); // cliente novo entra no cadastro
   // O servidor pode ter trocado o número (outra pessoa usou o mesmo ao mesmo tempo)
   if (r.numero) form.numero.value = r.numero;
   salvarRascunho();
@@ -1318,8 +1351,127 @@ async function carregarLista() {
   const r = await api("GET", "/orcamentos").catch(() => ({ ok: false, erro: "Sem conexão com o servidor." }));
   if (!r.ok) { listaOrc.innerHTML = ""; return avisoLista(r.erro || "Não foi possível carregar a lista."); }
   orcamentosSalvos = r.orcamentos;
+  montarClientes(orcamentosSalvos);
   desenharLista();
 }
+/* ---------- Cadastro de clientes ----------
+   Vem dos orçamentos e pedidos já salvos no servidor (os seus; o administrador vê de todos).
+   Um cliente por nome; vale o documento mais recente dele. Escolher copia nome, CPF/CNPJ,
+   endereço, bairro, cidade, CEP e telefone para o orçamento que está na tela. */
+const buscaCliente = document.querySelector("#busca-cliente");
+const listaClientes = document.querySelector("#lista-clientes");
+const dicaCliente = document.querySelector("#dica-cliente");
+const DICA_CLIENTE = dicaCliente.textContent;
+const CAMPOS_CLIENTE = ["cliente", "documento", "endereco", "bairro", "cidade", "cep", "telefone"];
+let clientes = [];
+let marcadoCliente = -1;
+const semAcento = (t) => String(t || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/\s+/g, " ").trim();
+
+function montarClientes(lista) {
+  const porNome = new Map();
+  lista.forEach((o) => {
+    const chave = semAcento(o.cliente);
+    if (!chave) return;
+    const c = porNome.get(chave);
+    if (!c) porNome.set(chave, { nome: o.cliente.trim(), bairro: o.bairro || "", id: o.id, numero: o.numero, data: o.data, quando: String(o.atualizado || ""), qtd: 1 });
+    else {
+      c.qtd++;
+      // Fica com o documento mais recente (dados mais atualizados do cliente)
+      if (String(o.atualizado || "") > c.quando) Object.assign(c, { nome: o.cliente.trim(), bairro: o.bairro || c.bairro, id: o.id, numero: o.numero, data: o.data, quando: String(o.atualizado || "") });
+    }
+  });
+  clientes = [...porNome.values()].sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
+}
+async function carregarClientes() {
+  const r = await api("GET", "/orcamentos").catch(() => null);
+  if (r && r.ok && Array.isArray(r.orcamentos)) montarClientes(r.orcamentos);
+}
+function fecharClientes() {
+  listaClientes.hidden = true;
+  buscaCliente.setAttribute("aria-expanded", "false");
+  marcadoCliente = -1;
+}
+function mostrarClientes() {
+  const palavras = semAcento(buscaCliente.value).split(" ").filter(Boolean);
+  if (!palavras.length) return fecharClientes();
+  const achados = clientes.filter((c) => {
+    const texto = semAcento(`${c.nome} ${c.bairro}`);
+    return palavras.every((p) => texto.includes(p));
+  })
+    // Primeiro quem tem o nome começando pelo que foi digitado
+    .sort((a, b) => Number(!semAcento(a.nome).startsWith(palavras[0])) - Number(!semAcento(b.nome).startsWith(palavras[0])))
+    .slice(0, 8);
+  listaClientes.replaceChildren();
+  if (!achados.length) {
+    const li = document.createElement("li");
+    li.className = "vazio";
+    li.textContent = clientes.length ? "Nenhum cliente com esse nome. Preencha abaixo como cliente novo." : "Ainda não há clientes salvos.";
+    listaClientes.appendChild(li);
+  }
+  achados.forEach((c, i) => {
+    const li = document.createElement("li");
+    li.setAttribute("role", "option");
+    li.id = `cliente-op-${i}`;
+    const nome = document.createElement("span");
+    nome.className = "busca-cliente__nome";
+    nome.textContent = c.nome;
+    const info = document.createElement("span");
+    info.className = "busca-cliente__info";
+    info.textContent = [c.bairro, `${c.qtd} ${c.qtd === 1 ? "documento" : "documentos"}`].filter(Boolean).join(" · ");
+    li.append(nome, info);
+    // mousedown: escolhe antes de o campo perder o foco e a lista fechar
+    li.addEventListener("mousedown", (e) => { e.preventDefault(); escolherCliente(c); });
+    listaClientes.appendChild(li);
+  });
+  marcadoCliente = achados.length ? 0 : -1;
+  marcarCliente();
+  listaClientes.hidden = false;
+  buscaCliente.setAttribute("aria-expanded", "true");
+}
+function marcarCliente() {
+  const ops = listaClientes.querySelectorAll('[role="option"]');
+  ops.forEach((li, i) => li.setAttribute("aria-selected", i === marcadoCliente ? "true" : "false"));
+  if (ops[marcadoCliente]) {
+    buscaCliente.setAttribute("aria-activedescendant", ops[marcadoCliente].id);
+    ops[marcadoCliente].scrollIntoView({ block: "nearest" });
+  } else buscaCliente.removeAttribute("aria-activedescendant");
+}
+async function escolherCliente(c) {
+  fecharClientes();
+  buscaCliente.value = c.nome;
+  dicaCliente.classList.remove("ok");
+  dicaCliente.textContent = "Buscando os dados do cliente...";
+  const r = await api("GET", `/orcamentos/${c.id}`).catch(() => null);
+  const campos = r && r.ok && r.dados && r.dados.campos;
+  if (!campos) {
+    dicaCliente.textContent = "Não foi possível buscar os dados agora. Confira a internet e tente de novo.";
+    return;
+  }
+  CAMPOS_CLIENTE.forEach((k) => { if (form[k]) form[k].value = campos[k] || (k === "cidade" ? form[k].value : ""); });
+  form.cliente.classList.remove("invalido");
+  atualizar();
+  salvarRascunho();
+  buscaCliente.value = "";
+  dicaCliente.textContent = `Dados de ${c.nome} preenchidos (do ${campos.numero || c.numero || "último documento"}${campos.data ? `, de ${dataBR(campos.data)}` : ""}). Confira se algo mudou.`;
+  dicaCliente.classList.add("ok");
+}
+buscaCliente.addEventListener("input", (e) => { e.stopPropagation(); mostrarClientes(); });
+buscaCliente.addEventListener("focus", () => { if (buscaCliente.value.trim()) mostrarClientes(); });
+buscaCliente.addEventListener("blur", fecharClientes);
+buscaCliente.addEventListener("keydown", (e) => {
+  const ops = listaClientes.querySelectorAll('[role="option"]');
+  if (e.key === "ArrowDown" && ops.length) { e.preventDefault(); marcadoCliente = (marcadoCliente + 1) % ops.length; marcarCliente(); }
+  else if (e.key === "ArrowUp" && ops.length) { e.preventDefault(); marcadoCliente = (marcadoCliente - 1 + ops.length) % ops.length; marcarCliente(); }
+  else if (e.key === "Enter") {
+    // Enter nunca envia o formulário (baixar PDF) a partir da busca
+    e.preventDefault();
+    const achado = !listaClientes.hidden && ops[marcadoCliente];
+    if (achado) achado.dispatchEvent(new MouseEvent("mousedown", { cancelable: true }));
+  } else if (e.key === "Escape") fecharClientes();
+});
+// Mexeu no nome à mão depois de puxar do cadastro: volta a dica normal
+form.cliente.addEventListener("input", () => { if (dicaCliente.classList.contains("ok")) { dicaCliente.classList.remove("ok"); dicaCliente.textContent = DICA_CLIENTE; } });
+
 // Abre um orçamento salvo: ele passa a ter o próprio rascunho neste aparelho
 async function abrirSalvo(id, totalSalvo) {
   const r = await api("GET", `/orcamentos/${id}`).catch(() => ({ ok: false, erro: "Sem conexão com o servidor." }));
@@ -1396,7 +1548,7 @@ async function iniciar() {
   if (!form.data.value) form.data.value = hoje();
   atualizar();
   // Primeiro sobem os rascunhos antigos (a numeração acompanha), depois vem a sugestão do próximo nº
-  importarRascunhos().then(sugerirNumero);
+  importarRascunhos().then(sugerirNumero).then(carregarClientes);
 }
 
 // Já entrou antes neste aparelho? Confirma com o servidor (vale bloqueio na hora)
