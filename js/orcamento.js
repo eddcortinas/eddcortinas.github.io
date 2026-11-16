@@ -347,7 +347,16 @@ function adicionarItem(dados = {}) {
     const avulso = !!(m && m.fixo);
     medidas.forEach((l) => { l.hidden = avulso; });
     rotuloDesc.textContent = avulso ? "Nome / descrição do item (aparece no PDF)" : "Descrição (tecido, cor, comando, instalação...)";
+    el.classList.toggle("item--avulso", avulso);
+    ajustarPainelTecido();
   };
+  // Quadro "Tecido e acabamento": some quando o modelo não tem nada para escolher ali
+  const painelTecido = el.querySelector(".item__tecido");
+  const ajustarPainelTecido = () => {
+    painelTecido.hidden = [".item__categoria", ".item__variante", ".item__cor", ".item__adicionais", ".item__guia"]
+      .every((s) => el.querySelector(s).hidden);
+  };
+  selCat.addEventListener("change", ajustarPainelTecido);
   sel.addEventListener("change", ajustarCampos);
   ajustarCampos();
   ["largura", "altura"].forEach((k) => {
@@ -430,6 +439,11 @@ function atualizar() {
     const { r, totalAjustado } = t.itens[i];
     // Valor do item = o que vai para o PDF (já com o ajuste interno)
     el.querySelector('[data-campo="total"]').textContent = reais.format(totalAjustado);
+    // Topo do item: número e "Ambiente · Modelo" para achar o item fácil na lista
+    el.querySelector(".item__num").textContent = i + 1;
+    const mod = MODELOS[t.itens[i].dados.modelo];
+    el.querySelector(".item__titulo").textContent =
+      [String(t.itens[i].dados.ambiente || "").trim(), mod && mod.nome].filter(Boolean).join(" · ") || "Novo item";
     const m = MODELOS[t.itens[i].dados.modelo];
     const base = lerNumero(t.itens[i].dados.precoBase);
     const tabela = m && !m.fixo ? precoTabela(m, t.itens[i].dados) : 0;
