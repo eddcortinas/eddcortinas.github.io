@@ -197,3 +197,10 @@ label[hidden] { display: none; }
 .aviso-precos { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin: 10px 0 0; padding: 10px 14px; border-radius: 12px; background: #fff4e5; color: #7a3d00; font-size: .9rem; font-weight: 600; }
 .aviso-precos[hidden] { display: none; }
 .aviso-precos .btn { padding: 6px 14px; font-size: .84rem; }
+
+/* Adicionais da tabela de tecidos (kit premium, base cunha, redutor de peso...) */
+.item__adicionais { display: flex; flex-wrap: wrap; gap: 6px 18px; align-self: end; }
+.item__adicionais[hidden] { display: none; }
+.item__adicional { flex-direction: row; align-items: center; gap: 8px; font-weight: 500; cursor: pointer; margin: 0; }
+.item__adicional input { width: 20px; height: 20px; padding: 0; accent-color: var(--azul); flex: none; }
+.item__calc { white-space: normal; }

@@ -137,8 +137,59 @@ async function carregarModelos() {
   } catch (e) {
     console.warn("Não foi possível ler os modelos do site", e);
   }
+  // Tecidos da tabela (js/tabela-tecidos.js): coleções, opções (tubo/vias), cores e adicionais de cada modelo
+  if (typeof TABELA_TECIDOS !== "undefined") {
+    Object.entries(TABELA_TECIDOS).forEach(([nome, tabela]) => {
+      let m = MODELOS.find((x) => x.nome === nome);
+      if (!m) {
+        // Modelo que só o gerador tem (ex.: painel romano): entra logo depois do painel
+        const ref = MODELOS.find((x) => x.nome === "Cortina painel");
+        m = { nome, grupo: ref ? ref.grupo : "Cortinas", preco: 0, calculo: "", alturamax: 2.8, acessorios: 0, guia: 0, prazo: ref ? ref.prazo : 10 };
+        MODELOS.splice(ref ? MODELOS.indexOf(ref) + 1 : MODELOS.length, 0, m);
+      }
+      m.tabela = tabela;
+    });
+  }
   MODELOS.push({ nome: "Kit instalação", grupo: "Outros (valor fixo)", preco: 0, fixo: true });
   MODELOS.push({ nome: "Serviço / outro item", grupo: "Outros (valor fixo)", preco: 0, fixo: true });
+}
+
+/* Tabela de tecidos do item: coleção (categoria), opção (tubo/vias), cor e adicionais */
+const colecaoDe = (m, nome) => (m && m.tabela && nome ? m.tabela.colecoes.find((c) => c.nome === nome) : null);
+// Opção usada (índice no preço da coleção): a escolhida ou, na rolô em "Automático",
+// R32 até 3,20 m² e 2,00 m de largura e R38 acima disso
+function varianteUsada(m, dados) {
+  const v = m && m.tabela && m.tabela.variante;
+  if (!v) return 0;
+  const i = v.opcoes.indexOf(dados.variante);
+  if (i >= 0) return i;
+  if (v.automatica === "rolo") {
+    const l = lerMedida(dados.largura), h = lerMedida(dados.altura);
+    return l * h > 3.2 || l > 2 ? 1 : 0;
+  }
+  return 0;
+}
+// Preço do m² na tabela de hoje: o da coleção (na opção usada) ou, sem coleção, o preço base do modelo
+function precoTabela(m, dados) {
+  const c = colecaoDe(m, dados.categoria);
+  return c ? c.precos[varianteUsada(m, dados)] || c.precos[0] : m.preco;
+}
+// Muda quando muda o que define o preço (modelo, coleção ou opção): aí o item pega o preço de hoje
+const chavePreco = (m, dados) => (m ? `${m.nome}|${dados.categoria || ""}|${varianteUsada(m, dados)}` : "");
+function adicionaisDe(m, dados) {
+  const ids = String(dados.adicionais || "").split(",").filter(Boolean);
+  return ((m && m.tabela && m.tabela.adicionais) || []).filter((a) => ids.includes(a.id));
+}
+// "Coleção Screen 3% - tubo R38 - cor 701" (vai no PDF e na conta do item)
+function textoTecido(m, dados) {
+  const c = colecaoDe(m, dados.categoria);
+  const v = m && m.tabela && m.tabela.variante;
+  const opcao = c && v ? v.opcoes[varianteUsada(m, dados)] : "";
+  return [
+    dados.categoria && `Coleção ${dados.categoria}`,
+    opcao && (v.rotulo === "Tubo" ? `tubo ${opcao}` : opcao),
+    dados.cor && `cor ${/^\d/.test(dados.cor) ? dados.cor : dados.cor.toLowerCase()}`,
+  ].filter(Boolean).join(" - ");
 }
 
 function opcoesModelo() {
@@ -154,8 +205,14 @@ function calcularItem(dados) {
   const qtd = Math.max(1, parseInt(dados.qtd, 10) || 1);
   if (!m) return { total: 0, calc: "", medida: "" };
   const manual = lerNumero(dados.unitario);
-  // Preço guardado quando o item foi feito; sem ele (item novo ou orçamento antigo), o da tabela de hoje
-  const preco = manual || lerNumero(dados.precoBase) || m.preco;
+  // Preço guardado quando o item foi feito; sem ele (item novo ou orçamento antigo), o da tabela de hoje.
+  // Adicionais em % (kit premium, base cunha) entram no m²; os de valor fixo, por peça.
+  const tabelado = lerNumero(dados.precoBase) || precoTabela(m, dados);
+  const adicionais = m.fixo ? [] : adicionaisDe(m, dados);
+  const pct = adicionais.reduce((t, a) => t + (a.pct || 0), 0);
+  const fixosPeca = adicionais.reduce((t, a) => t + (a.valor || 0), 0);
+  const preco = manual || tabelado * (1 + pct / 100);
+  const colecao = colecaoDe(m, dados.categoria);
 
   if (m.fixo) {
     return { total: preco * qtd, calc: preco ? `${qtd} x ${reais.format(preco)}` : "Informe o valor unitário.", medida: "", preco, qtd };
@@ -164,6 +221,7 @@ function calcularItem(dados) {
   const largura = lerMedida(dados.largura);
   const altura = lerMedida(dados.altura);
   if (!largura || !altura) return { total: 0, calc: "Informe largura e altura.", medida: "", preco, qtd };
+  if (!preco) return { total: 0, calc: m.tabela ? "Escolha a coleção." : "Informe o valor unitário.", medida: "", preco, qtd };
 
   let real = largura * altura;
   let un = "m²";
@@ -180,18 +238,32 @@ function calcularItem(dados) {
       extra = `tecido invertido, ${panos} pano(s) x ${numero.format(altura)} m`;
     }
   }
-  const minimo = real < AREA_MINIMA;
-  const cobrada = minimo ? AREA_MINIMA : real;
+  // Área mínima: a da tabela de tecidos quando tem coleção (ex.: 1,60 m² na rolô), senão 1,5
+  const areaMinima = (colecao && m.tabela.areaMinima) || AREA_MINIMA;
+  const minimo = real < areaMinima;
+  const cobrada = minimo ? areaMinima : real;
   // Guia opcional (rolô): (altura x 2 + largura) x valor do metro da guia, por peça
   const valorGuia = m.guia && dados.guia ? (altura * 2 + largura) * m.guia : 0;
-  const total = cobrada * preco * qtd + (m.acessorios || 0) * qtd + valorGuia * qtd;
+  const total = cobrada * preco * qtd + (m.acessorios || 0) * qtd + valorGuia * qtd + fixosPeca * qtd;
 
   const partes = [`${numero.format(cobrada)} ${un} x ${reais.format(preco)}`];
+  if (pct && !manual) partes.push(`(${reais.format(tabelado)} + ${adicionais.filter((a) => a.pct).map((a) => `${a.pct}% ${a.pdf.toLowerCase()}`).join(" + ")})`);
+  adicionais.filter((a) => a.valor).forEach((a) => partes.push(`+ ${a.pdf.toLowerCase()} ${reais.format(a.valor)}`));
   if (m.acessorios) partes.push(`+ ${m.acessoriosNome || "acessórios"} ${reais.format(m.acessorios)}`);
   if (valorGuia) partes.push(`+ guia ${reais.format(valorGuia)}`);
   if (qtd > 1) partes.push(`x ${qtd} peças`);
   if (extra) partes.push(`(${extra})`);
   if (minimo) partes.push(`- área mínima (real ${numero.format(real)} ${un})`);
+  if (colecao) {
+    const v = m.tabela.variante;
+    if (v && v.automatica && !dados.variante) partes.push(`· tubo ${v.opcoes[varianteUsada(m, dados)]} automático`);
+    // Avisos da tabela: largura máxima da coleção, área máxima do modelo e tubo R32 em peça grande
+    const avisos = [];
+    if (colecao.larguraMax && largura > colecao.larguraMax + 1e-9) avisos.push(`largura acima da máxima da coleção (${numero.format(colecao.larguraMax)} m)`);
+    if (m.tabela.areaMaxima && real > m.tabela.areaMaxima + 1e-9) avisos.push(`área acima da máxima do modelo (${numero.format(m.tabela.areaMaxima)} m²)`);
+    if (v && v.automatica && dados.variante === v.opcoes[0] && (real > 3.2 || largura > 2)) avisos.push("acima de 3,20 m² ou 2,00 m de largura use R38");
+    if (avisos.length) partes.push(`· ATENÇÃO: ${avisos.join("; ")}`);
+  }
 
   return {
     total,
@@ -211,6 +283,59 @@ function adicionarItem(dados = {}) {
     if (campo && campo.type === "checkbox") campo.checked = !!v;
     else if (campo && "value" in campo && campo.tagName !== "OUTPUT") campo.value = v;
   });
+  // Coleção, opção (tubo/vias), cor e adicionais conforme o modelo (tabela de tecidos)
+  const selCat = el.querySelector('[data-campo="categoria"]');
+  const selVar = el.querySelector('[data-campo="variante"]');
+  const selCor = el.querySelector('[data-campo="cor"]');
+  const campoAdic = el.querySelector('[data-campo="adicionais"]');
+  const caixaAdic = el.querySelector(".item__adicionais");
+  const opcao = (valor, texto) => { const o = document.createElement("option"); o.value = valor; o.textContent = texto; return o; };
+  const preencherCores = (manter) => {
+    const c = colecaoDe(MODELOS[sel.value], selCat.value);
+    const cores = c ? c.cores : [];
+    selCor.replaceChildren(opcao("", cores.length ? "Escolha" : "-"), ...cores.map((cor) => opcao(cor, cor)));
+    // Cor guardada que saiu da tabela: continua aparecendo para não sumir do orçamento
+    if (manter && !cores.includes(manter)) selCor.appendChild(opcao(manter, manter));
+    selCor.value = manter || "";
+    selCor.closest("label").hidden = !cores.length && !manter;
+  };
+  const preencherTecido = (manterCat, manterCor, manterVar, manterAdic) => {
+    const m = MODELOS[sel.value];
+    const t = m && m.tabela;
+    const cats = t ? t.colecoes : [];
+    selCat.replaceChildren(opcao("", cats.length ? "Escolha" : "-"), ...cats.map((c) => opcao(c.nome, c.nome)));
+    if (manterCat && !colecaoDe(m, manterCat)) selCat.appendChild(opcao(manterCat, manterCat));
+    selCat.value = manterCat || "";
+    selCat.closest("label").hidden = !cats.length && !manterCat;
+    // Opção: tubo na rolô (com "Automático") ou número de vias no painel
+    const v = t && t.variante;
+    el.querySelector(".item__variante-rotulo").textContent = v ? v.rotulo : "Opção";
+    selVar.replaceChildren(...(v ? [...(v.automatica ? [opcao("", "Automático")] : []), ...v.opcoes.map((o) => opcao(o, o))] : []));
+    selVar.value = v ? (v.opcoes.includes(manterVar) ? manterVar : v.automatica ? "" : v.opcoes[0]) : "";
+    selVar.closest("label").hidden = !v;
+    // Adicionais: uma caixinha para cada um (guardados juntos, separados por vírgula)
+    const marcados = String(manterAdic || "").split(",");
+    const adic = (t && t.adicionais) || [];
+    caixaAdic.replaceChildren(...adic.map((a) => {
+      const l = document.createElement("label");
+      l.className = "item__adicional";
+      const c = document.createElement("input");
+      c.type = "checkbox";
+      c.value = a.id;
+      c.checked = marcados.includes(a.id);
+      l.append(c, ` ${a.nome}${a.pct ? ` (+${a.pct}%)` : a.valor ? ` (+ ${reais.format(a.valor)})` : ""}`);
+      return l;
+    }));
+    caixaAdic.hidden = !adic.length;
+    campoAdic.value = adic.filter((a) => marcados.includes(a.id)).map((a) => a.id).join(",");
+    preencherCores(manterCor);
+  };
+  preencherTecido(dados.categoria, dados.cor, dados.variante, dados.adicionais);
+  sel.addEventListener("change", () => preencherTecido());
+  selCat.addEventListener("change", () => preencherCores());
+  caixaAdic.addEventListener("change", () => {
+    campoAdic.value = [...caixaAdic.querySelectorAll("input:checked")].map((c) => c.value).join(",");
+  });
   // Campos conforme o modelo: guia só na rolô; item de valor fixo (avulso) não tem medidas
   const caixaGuia = el.querySelector(".item__guia");
   const medidas = el.querySelectorAll(".item__medida");
@@ -224,8 +349,6 @@ function adicionarItem(dados = {}) {
     rotuloDesc.textContent = avulso ? "Nome / descrição do item (aparece no PDF)" : "Descrição (tecido, cor, comando, instalação...)";
   };
   sel.addEventListener("change", ajustarCampos);
-  // Trocou o modelo: o item passa a usar o preço da tabela de hoje para o novo modelo
-  sel.addEventListener("change", () => { el.querySelector('[data-campo="precoBase"]').value = ""; });
   ajustarCampos();
   ["largura", "altura"].forEach((k) => {
     const c = el.querySelector(`[data-campo="${k}"]`);
@@ -240,15 +363,16 @@ function adicionarItem(dados = {}) {
   atualizar();
 }
 
-function lerItens() {
-  return [...listaItens.querySelectorAll(".item")].map((el) => {
-    const d = {};
-    el.querySelectorAll("[data-campo]").forEach((c) => {
-      if (c.type === "checkbox") d[c.dataset.campo] = c.checked ? "1" : "";
-      else if (c.tagName !== "OUTPUT" && c.tagName !== "P") d[c.dataset.campo] = c.value;
-    });
-    return d;
+function lerItem(el) {
+  const d = {};
+  el.querySelectorAll("[data-campo]").forEach((c) => {
+    if (c.type === "checkbox") d[c.dataset.campo] = c.checked ? "1" : "";
+    else if (c.tagName !== "OUTPUT" && c.tagName !== "P") d[c.dataset.campo] = c.value;
   });
+  return d;
+}
+function lerItens() {
+  return [...listaItens.querySelectorAll(".item")].map(lerItem);
 }
 
 // Totais do que está na tela
@@ -292,8 +416,14 @@ function atualizar() {
   listaItens.querySelectorAll(".item").forEach((el) => {
     const m = MODELOS[el.querySelector('[data-campo="modelo"]').value];
     const base = el.querySelector('[data-campo="precoBase"]');
-    if (m && !m.fixo && !base.value) base.value = precoParaTexto(m.preco);
-    if (!m || m.fixo) base.value = "";
+    const chave = el.querySelector('[data-campo="precoChave"]');
+    const d = lerItem(el);
+    const atual = chavePreco(m, d);
+    // Orçamento antigo (sem chave): mantém o preço guardado e só anota a chave
+    if (m && !m.fixo && base.value && !chave.value) chave.value = atual;
+    // Item novo, ou mudou modelo/coleção/opção: guarda o preço da tabela de hoje
+    if (m && !m.fixo && (!base.value || chave.value !== atual)) { base.value = precoParaTexto(precoTabela(m, d)); chave.value = atual; }
+    if (!m || m.fixo) { base.value = ""; chave.value = ""; }
   });
   const t = totais();
   [...listaItens.querySelectorAll(".item")].forEach((el, i) => {
@@ -302,17 +432,18 @@ function atualizar() {
     el.querySelector('[data-campo="total"]').textContent = reais.format(totalAjustado);
     const m = MODELOS[t.itens[i].dados.modelo];
     const base = lerNumero(t.itens[i].dados.precoBase);
-    const antigo = m && !m.fixo && base && Math.abs(base - m.preco) > 0.005 && !lerNumero(t.itens[i].dados.unitario);
+    const tabela = m && !m.fixo ? precoTabela(m, t.itens[i].dados) : 0;
+    const antigo = m && !m.fixo && base && Math.abs(base - tabela) > 0.005 && !lerNumero(t.itens[i].dados.unitario);
     el.querySelector('[data-campo="calc"]').textContent = r.calc +
       (t.ajusteInterno && r.total ? ` · sem ajuste: ${reais.format(r.total)}` : "") +
-      (antigo ? ` · preço de quando foi feito (tabela de hoje: ${reais.format(m.preco)})` : "");
-    el.querySelector('[data-campo="unitario"]').placeholder = m && !m.fixo ? `${reais.format(base || m.preco)} (auto)` : "valor";
+      (antigo ? ` · preço de quando foi feito (tabela de hoje: ${reais.format(tabela)})` : "");
+    el.querySelector('[data-campo="unitario"]').placeholder = m && !m.fixo ? `${reais.format(base || tabela)} (auto)` : "valor";
   });
   // Algum item com preço diferente da tabela de hoje: avisa e oferece atualizar
   const diferentes = t.itens.filter((i) => {
     const m = MODELOS[i.dados.modelo];
     const base = lerNumero(i.dados.precoBase);
-    return m && !m.fixo && base && Math.abs(base - m.preco) > 0.005 && !lerNumero(i.dados.unitario);
+    return m && !m.fixo && base && Math.abs(base - precoTabela(m, i.dados)) > 0.005 && !lerNumero(i.dados.unitario);
   }).length;
   document.querySelector("#aviso-precos").hidden = !diferentes;
   document.querySelector("#aviso-precos-texto").textContent = diferentes
@@ -633,7 +764,9 @@ async function gerarPDF() {
     const m = MODELOS[dados.modelo];
     // Item de valor fixo com descrição: a própria descrição vira o título (sem "SERVIÇO / OUTRO ITEM")
     const titulo = m.fixo && dados.descricao ? "" : m.nome.toUpperCase();
-    const desc = [titulo, m.guia && dados.guia && "Com guia", dados.descricao, !ocultarMedidas && r.medida].filter(Boolean).join("\n");
+    // Tecido logo abaixo do modelo ("Coleção Screen 3% - tubo R38 - cor 701") e os adicionais
+    const adicionais = adicionaisDe(m, dados).map((a) => a.pdf).join(", ");
+    const desc = [titulo, textoTecido(m, dados), adicionais, m.guia && dados.guia && "Com guia", dados.descricao, !ocultarMedidas && r.medida].filter(Boolean).join("\n");
     // Preço já com o ajuste interno embutido
     return [txt(dados.ambiente || "-"), txt(desc), String(r.qtd || 1), txt(reais.format(totalAjustado))];
   });
@@ -789,6 +922,8 @@ function carregarPedido(pedido) {
       altura: p.h ? numero.format(p.h) : "",
       qtd: String(p.q || 1),
       guia: p.g ? "1" : "",
+      categoria: p.k || "",
+      cor: p.c || "",
       descricao: p.d || (indice < 0 && p.m ? p.m : ""),
     });
   });

@@ -524,6 +524,7 @@ section[id] { scroll-margin-top: calc(var(--header-h) + 8px); }
   margin-bottom: 18px;
 }
 .sim__row--2 { grid-template-columns: 1fr 1fr; }
+#sim-categoria-campos[hidden], #sim-categoria-campos .field[hidden] { display: none; }
 .sim__min {
   display: inline-block;
   vertical-align: middle;
