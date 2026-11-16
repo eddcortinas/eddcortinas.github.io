@@ -304,3 +304,10 @@ label[hidden] { display: none; }
 .busca-cliente__lista .vazio:hover { background: none; }
 #dica-cliente.ok { color: #1f6b33; font-weight: 600; }
 @media (max-width: 760px) { .busca-cliente__info { white-space: normal; } }
+
+/* Recibo (no fim do formulário) */
+.recibo { border-left: 4px solid var(--laranja); }
+#dica-recibo { margin: 10px 0 0; }
+#dica-recibo:empty { display: none; }
+#erro-recibo { margin: 8px 0 0; }
+.recibo__acoes { display: flex; justify-content: flex-end; margin-top: 12px; }
