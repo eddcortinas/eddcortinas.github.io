@@ -307,6 +307,8 @@ label[hidden] { display: none; }
 
 /* Recibo (no fim do formulário) */
 .recibo { border-left: 4px solid var(--laranja); }
+.recibo .bloco__titulo { margin-bottom: 14px; }
+.recibo .bloco__titulo h2 { margin-bottom: 0; }
 #dica-recibo { margin: 10px 0 0; }
 #dica-recibo:empty { display: none; }
 #erro-recibo { margin: 8px 0 0; }
