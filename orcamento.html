@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/orcamento.css?v=21">
+  <link rel="stylesheet" href="css/orcamento.css?v=22">
 </head>
 <body class="bloqueado">
   <!-- Login: a página só abre depois de entrar -->
@@ -189,6 +189,45 @@
         </div>
       </section>
 
+      <!-- Recibo: usa o cliente e o total acima. Campos vazios = preenchidos sozinhos (veja o texto cinza) -->
+      <section class="bloco recibo" id="bloco-recibo">
+        <div class="bloco__titulo">
+          <h2>Recibo</h2>
+          <span class="dica">Usa os dados do cliente lá de cima. Serve também para serviço avulso, sem itens.</span>
+        </div>
+        <div class="grade grade--4">
+          <label>Pagamento
+            <select name="reciboParte">
+              <option value="total">Valor total</option>
+              <option value="entrada">Entrada (sinal)</option>
+              <option value="restante">Restante (quitação)</option>
+            </select>
+          </label>
+          <label>Valor recebido (R$)<input name="reciboValor" inputmode="decimal" placeholder="0,00"></label>
+          <label>Forma de pagamento
+            <select name="reciboForma">
+              <option>Pix</option>
+              <option>Dinheiro</option>
+              <option>Cartão de crédito</option>
+              <option>Cartão de débito</option>
+              <option>Transferência</option>
+              <option>Boleto</option>
+              <option value="">Não informar</option>
+            </select>
+          </label>
+          <label>Data (vazio = hoje)<input type="date" name="reciboData"></label>
+        </div>
+        <div class="grade grade--4">
+          <label>Nº do recibo<input name="reciboNumero" placeholder="REC"></label>
+          <label class="col-3">Referente a<input name="reciboRef" placeholder="Ex.: serviço de manutenção de cortinas"></label>
+        </div>
+        <p class="dica" id="dica-recibo"></p>
+        <p class="erro" id="erro-recibo" role="alert" hidden></p>
+        <div class="recibo__acoes">
+          <button type="button" class="btn btn--primario" id="baixar-recibo">Baixar recibo</button>
+        </div>
+      </section>
+
       <p class="erro" id="erro" role="alert" hidden></p>
 
       <div class="acoes">
@@ -250,6 +289,6 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js" defer></script>
   <script src="js/tabela-tecidos.js?v=7" defer></script>
-  <script src="js/orcamento.js?v=36" defer></script>
+  <script src="js/orcamento.js?v=37" defer></script>
 </body>
 </html>

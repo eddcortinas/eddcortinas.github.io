@@ -525,6 +525,7 @@ function atualizar() {
     : "O ajuste interno entra no preço de cada item e não aparece no PDF.";
   document.querySelector("#r-total").textContent = reais.format(t.total);
   atualizarDatas(t);
+  atualizarRecibo(t);
   // Forma de pagamento: texto calculado pelo total, até você editar à mão
   if (form.pagamentoAuto.value === "1") form.pagamento.value = textoPagamentoPadrao(t.total);
   // Texto editado à mão com valores em R$ que não batem com o total de agora: avisa
@@ -758,19 +759,16 @@ function imagemParaDataURL(src, max = 1400, tipo = "image/jpeg") {
 }
 const arquivoParaURL = (f) => new Promise((ok) => { const r = new FileReader(); r.onload = () => ok(r.result); r.readAsDataURL(f); });
 
-async function gerarPDF() {
-  const { jsPDF } = window.jspdf;
-  const doc = new jsPDF({ unit: "mm", format: "a4" });
-  const W = 210, M = 14, AZUL = [11, 29, 84], LARANJA = [247, 137, 58], CINZA = [90, 96, 94];
-  const t = totais();
+/* ---------- Partes comuns dos PDFs (orçamento, pedido e recibo) ---------- */
+const PDF_W = 210, PDF_M = 14, PDF_AZUL = [11, 29, 84], PDF_LARANJA = [247, 137, 58], PDF_CINZA = [90, 96, 94];
+// Título, logo, dados da EDD (esquerda) e do cliente (direita). Devolve onde começa a faixa
+async function cabecalhoPDF(doc, rotulo, vendedor) {
+  const W = PDF_W, M = PDF_M, AZUL = PDF_AZUL;
   const f = form;
-  const tipo = f.tipo.value || "Orçamento"; // "Orçamento" ou "Pedido"
-  const ocultarMedidas = f.ocultarMedidas.checked;
-
   // Cabeçalho
   doc.setFont("helvetica", "bold"); doc.setFontSize(9); doc.setTextColor(...AZUL);
-  doc.text(tipo.toUpperCase(), M, 13);
-  doc.setDrawColor(...AZUL); doc.setLineWidth(0.4); doc.line(M + doc.getTextWidth(tipo.toUpperCase()) + 4, 12, W - M, 12);
+  doc.text(txt(rotulo.toUpperCase()), M, 13);
+  doc.setDrawColor(...AZUL); doc.setLineWidth(0.4); doc.line(M + doc.getTextWidth(txt(rotulo.toUpperCase())) + 4, 12, W - M, 12);
 
   try {
     const logo = await imagemParaDataURL(EMPRESA.logo, 480, "image/png");
@@ -786,7 +784,7 @@ async function gerarPDF() {
   doc.setFont("helvetica", "normal"); doc.setFontSize(8.5);
   let y = Y_LINHAS;
   EMPRESA.linhas.forEach((l) => { doc.text(txt(l), M, y); y += ENTRELINHA; });
-  if (f.vendedor.value) { doc.text(txt(`Vendedor: ${f.vendedor.value}`), M, y); y += ENTRELINHA; }
+  if (vendedor) { doc.text(txt(`Vendedor: ${vendedor}`), M, y); y += ENTRELINHA; }
 
   // Cliente: encostado no canto direito, nas mesmas linhas dos dados da EDD
   const XD = W - M, LARG_C = 85;
@@ -803,17 +801,12 @@ async function gerarPDF() {
       doc.splitTextToSize(txt(l), LARG_C).forEach((parte) => { doc.text(parte, XD, yc, { align: "right" }); yc += ENTRELINHA; });
     });
 
-  // Faixa de informações
-  const yi = Math.max(y, yc) + 6;
+  return Math.max(y, yc) + 6;
+}
+// Faixa de informações entre duas linhas azuis; a última coluna fica em destaque
+function faixaPDF(doc, yi, info) {
+  const W = PDF_W, M = PDF_M, AZUL = PDF_AZUL, CINZA = PDF_CINZA;
   doc.setDrawColor(...AZUL); doc.setLineWidth(0.6); doc.line(M, yi, W - M, yi);
-  const info = [
-    [`Nº do ${tipo}`, f.numero.value || "-"],
-    ["Data", dataBR(f.data.value)],
-    // Pedido fechado não tem validade
-    ...(tipo === "Pedido" ? [] : [["Válido até", dataBR(f.validade.value) || "-"]]),
-    ["Previsão de Entrega", dataBR(f.previsao.value) || "A combinar"],
-    ["Valor Total", numero.format(t.total)],
-  ];
   const colW = (W - 2 * M) / info.length;
   const ultima = info.length - 1;
   info.forEach(([rotulo, valor], i) => {
@@ -827,6 +820,38 @@ async function gerarPDF() {
     doc.text(txt(valor), x + colW / 2, yi + 14.5, { align: "center" });
   });
   doc.setLineWidth(0.6); doc.line(M, yi + 20, W - M, yi + 20);
+}
+// Rodapé em todas as páginas
+function rodapePDF(doc, textoDireita) {
+  const W = PDF_W, M = PDF_M;
+  const paginas = doc.getNumberOfPages();
+  for (let p = 1; p <= paginas; p++) {
+    doc.setPage(p);
+    doc.setDrawColor(...PDF_LARANJA); doc.setLineWidth(0.8); doc.line(M, 287, W - M, 287);
+    doc.setFont("helvetica", "normal"); doc.setFontSize(7.5); doc.setTextColor(...PDF_CINZA);
+    doc.text(txt(`${EMPRESA.nome} - ${EMPRESA.site} - (85) 9 8733-4369`), M, 291.5);
+    doc.text(txt(`${textoDireita}${paginas > 1 ? ` - Pág. ${p}/${paginas}` : ""}`), W - M, 291.5, { align: "right" });
+  }
+}
+
+async function gerarPDF() {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit: "mm", format: "a4" });
+  const W = 210, M = 14, AZUL = [11, 29, 84], LARANJA = [247, 137, 58], CINZA = [90, 96, 94];
+  const t = totais();
+  const f = form;
+  const tipo = f.tipo.value || "Orçamento"; // "Orçamento" ou "Pedido"
+  const ocultarMedidas = f.ocultarMedidas.checked;
+
+  const yi = await cabecalhoPDF(doc, tipo, f.vendedor.value);
+  faixaPDF(doc, yi, [
+    [`Nº do ${tipo}`, f.numero.value || "-"],
+    ["Data", dataBR(f.data.value)],
+    // Pedido fechado não tem validade
+    ...(tipo === "Pedido" ? [] : [["Válido até", dataBR(f.validade.value) || "-"]]),
+    ["Previsão de Entrega", dataBR(f.previsao.value) || "A combinar"],
+    ["Valor Total", numero.format(t.total)],
+  ]);
 
   // Tabela de itens
   const linhas = t.itens.filter((i) => MODELOS[i.dados.modelo]).map(({ dados, r, totalAjustado }) => {
@@ -959,6 +984,204 @@ form.addEventListener("submit", async (e) => {
   await gerarPDF();
   if (salvo) aviso(`PDF baixado e ${form.tipo.value.toLowerCase()} nº ${form.numero.value} salvo em "Meus orçamentos".`);
   else aviso("PDF baixado, mas não foi possível salvar no servidor (sem conexão?). Clique em \"Salvar\" quando a internet voltar.", "");
+});
+
+/* ---------- Recibo ----------
+   Usa o cliente e o total do formulário. Campo vazio = automático
+   (valor pelo total, nº pelo do pedido, data de hoje, "referente a" pelos itens). */
+const PARTES_RECIBO = {
+  total: { fator: 1, texto: "" },
+  entrada: { fator: 0.5, texto: "entrada (sinal)" },
+  restante: { fator: 0.5, texto: "pagamento restante (quitação)" },
+};
+const MESES = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"];
+
+// 150 -> "cento e cinquenta reais"; 1250,5 -> "mil duzentos e cinquenta reais e cinquenta centavos"
+function valorPorExtenso(valor) {
+  const UN = ["", "um", "dois", "três", "quatro", "cinco", "seis", "sete", "oito", "nove", "dez", "onze", "doze", "treze",
+    "catorze", "quinze", "dezesseis", "dezessete", "dezoito", "dezenove"];
+  const DEZ = ["", "", "vinte", "trinta", "quarenta", "cinquenta", "sessenta", "setenta", "oitenta", "noventa"];
+  const CEM = ["", "cento", "duzentos", "trezentos", "quatrocentos", "quinhentos", "seiscentos", "setecentos", "oitocentos", "novecentos"];
+  const ate999 = (n) => {
+    if (n === 100) return "cem";
+    const partes = [];
+    if (n >= 100) partes.push(CEM[Math.floor(n / 100)]);
+    const r = n % 100;
+    if (r && r < 20) partes.push(UN[r]);
+    else if (r) partes.push(DEZ[Math.floor(r / 10)] + (r % 10 ? ` e ${UN[r % 10]}` : ""));
+    return partes.join(" e ");
+  };
+  const inteiro = (n) => {
+    if (!n) return "";
+    const mi = Math.floor(n / 1e6), mil = Math.floor((n % 1e6) / 1000), resto = n % 1000;
+    const partes = [];
+    if (mi) partes.push(`${ate999(mi)} ${mi === 1 ? "milhão" : "milhões"}`);
+    if (mil) partes.push(mil === 1 ? "mil" : `${ate999(mil)} mil`);
+    if (resto) partes.push(ate999(resto));
+    // "mil e quinhentos", mas "mil duzentos e cinquenta"
+    const ultimo = partes.length > 1 && resto && (resto < 100 || resto % 100 === 0) ? " e " : " ";
+    return partes.length > 1 ? partes.slice(0, -1).join(" ") + (resto ? ultimo : " ") + partes[partes.length - 1] : partes[0];
+  };
+  const centavosTotal = Math.round(valor * 100);
+  const r = Math.floor(centavosTotal / 100), c = centavosTotal % 100;
+  const partes = [];
+  if (r) partes.push(`${inteiro(r)}${r % 1e6 === 0 ? " de" : ""} ${r === 1 ? "real" : "reais"}`);
+  if (c) partes.push(`${ate999(c)} ${c === 1 ? "centavo" : "centavos"}`);
+  return partes.join(" e ") || "zero real";
+}
+
+// Nº do recibo sugerido a partir do pedido: PED 11/26-003 -> REC 11/26-003
+function numeroReciboAuto() {
+  const m = form.numero.value.trim().match(RE_NUMERO);
+  return m ? `REC ${m[2]}/${m[3]}-${m[4]}` : "";
+}
+// "Pedido nº PED 11/26-003 - entrada (sinal): Cortina rolô (2), Persiana vertical"
+function referenteAuto(t) {
+  const itens = t.itens.filter((i) => MODELOS[i.dados.modelo] && i.r.total > 0);
+  if (!itens.length) return "";
+  const nomes = itens.map(({ dados, r }) => {
+    const m = MODELOS[dados.modelo];
+    const nome = m.fixo && dados.descricao ? dados.descricao : m.nome;
+    return r.qtd > 1 ? `${nome} (${r.qtd})` : nome;
+  });
+  const lista = nomes.length > 4 ? `${nomes.slice(0, 4).join(", ")} e mais ${nomes.length - 4} itens` : nomes.join(", ");
+  const parte = PARTES_RECIBO[form.reciboParte.value].texto;
+  const doc = form.numero.value.trim() ? `${form.tipo.value} nº ${form.numero.value.trim()}` : form.tipo.value;
+  return `${doc}${parte ? ` - ${parte}` : ""}: ${lista}`;
+}
+function dadosRecibo(t = totais()) {
+  const parte = form.reciboParte.value;
+  const valorAuto = t.total * PARTES_RECIBO[parte].fator;
+  return {
+    parte,
+    valor: lerNumero(form.reciboValor.value) || valorAuto,
+    valorAuto,
+    numero: form.reciboNumero.value.trim() || numeroReciboAuto(),
+    data: form.reciboData.value || hoje(),
+    forma: form.reciboForma.value,
+    referente: form.reciboRef.value.trim() || referenteAuto(t),
+    total: t.total,
+  };
+}
+// Mostra nos campos vazios o que vai sair no recibo
+function atualizarRecibo(t) {
+  const r = dadosRecibo(t);
+  form.reciboValor.placeholder = r.valorAuto ? numero.format(r.valorAuto) : "0,00";
+  form.reciboNumero.placeholder = numeroReciboAuto() || "Opcional";
+  const ref = referenteAuto(t);
+  form.reciboRef.placeholder = ref || "Ex.: serviço de manutenção de cortinas";
+  document.querySelector("#dica-recibo").textContent = r.valor
+    ? `Vai sair: ${reais.format(r.valor)} (${valorPorExtenso(r.valor)}).` +
+      (r.parte === "entrada" && r.total > r.valor ? ` Fica faltando ${reais.format(r.total - r.valor)}.` : "") +
+      (ref && !form.reciboRef.value.trim() ? " O \"referente a\" sai com os itens do orçamento; escreva outro texto se quiser." : "")
+    : "Sem itens? Escreva o valor e o \"referente a\" (ex.: serviço de manutenção) e baixe o recibo.";
+}
+
+async function gerarRecibo() {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit: "mm", format: "a4", compress: true });
+  const W = PDF_W, M = PDF_M, AZUL = PDF_AZUL, CINZA = PDF_CINZA;
+  const r = dadosRecibo();
+  const f = form;
+
+  const yi = await cabecalhoPDF(doc, "Recibo", "");
+  faixaPDF(doc, yi, [
+    ["Nº do Recibo", r.numero || "-"],
+    ["Data", dataBR(r.data)],
+    ["Forma de Pagamento", r.forma || "-"],
+    ["Valor Recebido", numero.format(r.valor)],
+  ]);
+
+  // Texto do recibo
+  const digitos = f.documento.value.replace(/\D/g, "");
+  const rotuloDoc = digitos.length === 14 ? "CNPJ" : digitos.length === 11 ? "CPF" : "CPF/CNPJ";
+  const endereco = [f.endereco.value, f.bairro.value, f.cidade.value].map((s) => s.trim()).filter(Boolean).join(", ");
+  const corpo = `Recebemos de ${f.cliente.value.trim()}` +
+    (f.documento.value.trim() ? `, inscrito(a) no ${rotuloDoc} ${f.documento.value.trim()}` : "") +
+    (endereco ? `, com endereço em ${endereco}` : "") +
+    `, a importância de ${reais.format(r.valor)} (${valorPorExtenso(r.valor)})` +
+    (r.forma ? `, paga via ${r.forma.toLowerCase().replace("pix", "Pix")}` : "") + ", referente ao descrito abaixo.";
+  let y = yi + 34;
+  doc.setFont("helvetica", "normal"); doc.setFontSize(11); doc.setTextColor(30, 37, 35);
+  const linhas = doc.splitTextToSize(txt(corpo), W - 2 * M);
+  doc.text(linhas, M, y, { lineHeightFactor: 1.5 });
+  y += linhas.length * 11 * 0.3528 * 1.5 + 8;
+
+  // Referente a: caixa clara com o texto
+  const ref = doc.splitTextToSize(txt(r.referente), W - 2 * M - 12);
+  const extra = r.parte === "entrada" && r.total > r.valor
+    ? [txt(`Valor total: ${reais.format(r.total)} - Recebido agora: ${reais.format(r.valor)} - Saldo a pagar: ${reais.format(r.total - r.valor)}`)]
+    : [];
+  const hCaixa = 12 + (ref.length + extra.length) * 5.2;
+  doc.setFillColor(244, 241, 234); doc.rect(M, y, W - 2 * M, hCaixa, "F");
+  doc.setFillColor(...AZUL); doc.rect(M, y, 1.2, hCaixa, "F");
+  doc.setFont("helvetica", "bold"); doc.setFontSize(8); doc.setTextColor(...AZUL);
+  doc.text("REFERENTE A", M + 6, y + 6.5);
+  doc.setFont("helvetica", "normal"); doc.setFontSize(10); doc.setTextColor(30, 37, 35);
+  doc.text(ref, M + 6, y + 12.5);
+  if (extra.length) { doc.setFontSize(9); doc.setTextColor(...CINZA); doc.text(extra, M + 6, y + 12.5 + ref.length * 5.2); }
+  y += hCaixa + 12;
+
+  // Quitação
+  doc.setFont("helvetica", "normal"); doc.setFontSize(11); doc.setTextColor(30, 37, 35);
+  const quitacao = r.parte === "entrada"
+    ? "Para clareza, firmamos o presente recibo do valor acima, recebido como entrada (sinal)."
+    : "Para clareza, firmamos o presente recibo, dando plena e geral quitação do valor acima.";
+  const lq = doc.splitTextToSize(txt(quitacao), W - 2 * M);
+  doc.text(lq, M, y, { lineHeightFactor: 1.5 });
+  y += lq.length * 6 + 12;
+
+  // Local e data por extenso
+  const [ano, mes, dia] = r.data.split("-").map(Number);
+  doc.text(txt(`Fortaleza/CE, ${dia} de ${MESES[mes - 1]} de ${ano}.`), W - M, y, { align: "right" });
+
+  // Assinatura
+  const yA = Math.max(y + 32, 225);
+  const xc = W / 2;
+  // Assinatura desenhada no gerador, apoiada sobre a linha
+  const ass = await assinaturaRecortada();
+  if (ass) {
+    let w = 70, h = w * ass.h / ass.w;
+    if (h > 30) { h = 30; w = h * ass.w / ass.h; }
+    // A base da assinatura passa um pouco da linha, como numa assinatura de caneta
+    doc.addImage(ass.data, "PNG", xc - w / 2, yA - h * 0.82, w, h, "assinatura", "FAST");
+  }
+  doc.setDrawColor(30, 37, 35); doc.setLineWidth(0.3); doc.line(xc - 45, yA, xc + 45, yA);
+  doc.setFont("helvetica", "bold"); doc.setFontSize(10);
+  doc.text(EMPRESA.nome, xc, yA + (ass ? 8 : 5.5), { align: "center" });
+  doc.setFont("helvetica", "normal"); doc.setFontSize(8.5); doc.setTextColor(...CINZA);
+  const sob = [f.vendedor.value.trim(), EMPRESA.linhas.find((l) => l.startsWith("CNPJ"))].filter(Boolean);
+  sob.forEach((l, i) => doc.text(txt(l), xc, yA + (ass ? 13 : 10.5) + i * 4.5, { align: "center" }));
+
+  rodapePDF(doc, r.numero ? `Recibo Nº ${r.numero}` : "Recibo");
+  const nome = `Recibo ${r.numero || ""} - ${f.cliente.value || "cliente"}`.replace(/[\\/:*?"<>|]/g, "").replace(/\s+/g, " ").trim();
+  doc.save(`${nome}.pdf`);
+}
+
+/* Assinatura padrão de todos os recibos: imagem fixa do site (fundo transparente).
+   Sem o arquivo, o recibo sai com a linha em branco para assinar à mão. */
+const ASSINATURA_RECIBO = "img/assinatura-recibo.png";
+function assinaturaRecortada() {
+  return imagemParaDataURL(ASSINATURA_RECIBO, 700, "image/png").catch(() => null);
+}
+form.reciboValor.addEventListener("input", () => soValorEmReais(form.reciboValor));
+document.querySelector("#baixar-recibo").addEventListener("click", async () => {
+  const erroRecibo = document.querySelector("#erro-recibo");
+  erroRecibo.hidden = true;
+  form.querySelectorAll(".invalido").forEach((c) => c.classList.remove("invalido"));
+  const r = dadosRecibo();
+  const faltando = [];
+  if (!form.cliente.value.trim()) faltando.push(form.cliente);
+  if (!r.valor) faltando.push(form.reciboValor);
+  if (!r.referente) faltando.push(form.reciboRef);
+  if (faltando.length) {
+    faltando.forEach((c) => c.classList.add("invalido"));
+    erroRecibo.textContent = "Para o recibo, preencha o nome do cliente, o valor recebido e o \"referente a\".";
+    erroRecibo.hidden = false;
+    return;
+  }
+  if (!window.jspdf) { erroRecibo.textContent = "Não foi possível carregar o gerador de PDF. Verifique a internet e tente de novo."; erroRecibo.hidden = false; return; }
+  await gerarRecibo();
 });
 
 /* ---------- Pedido vindo do simulador do site (link #i=...) ---------- */
