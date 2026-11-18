@@ -724,13 +724,14 @@ async function numerarNovo({ envio }) {
   await envio;
   await sugerirNumero();
 }
-document.querySelector("#novo").addEventListener("click", () => {
+// "Novo orçamento": no topo da página e no fim do formulário
+["#novo", "#novo-topo"].forEach((s) => document.querySelector(s).addEventListener("click", () => {
   if (!confirm("Começar um orçamento novo? O atual é salvo e sai da tela.")) return;
   const fechado = fecharAtual();
   novoOrcamento();
   window.scrollTo({ top: 0 });
   numerarNovo(fechado);
-});
+}));
 
 /* ---------- PDF ---------- */
 // O PDF usa a fonte padrão (Latin-1): troca caracteres que ela não tem
@@ -952,9 +953,12 @@ form.addEventListener("submit", async (e) => {
     return;
   }
   if (!window.jspdf) { erro.textContent = "Não foi possível carregar o gerador de PDF. Verifique a internet e tente de novo."; erro.hidden = false; return; }
+  // Gerar o PDF sempre salva no servidor (aparece em "Meus orçamentos"). Salva antes do PDF,
+  // porque o servidor pode trocar o número e o PDF precisa sair com o número que ficou salvo.
+  const salvo = await salvarNoServidor({ silencioso: true });
   await gerarPDF();
-  // Baixou o PDF: guarda também no servidor, para aparecer em "Meus orçamentos"
-  if (await salvarNoServidor({ silencioso: true })) aviso(`PDF baixado e ${form.tipo.value.toLowerCase()} nº ${form.numero.value} salvo em "Meus orçamentos".`);
+  if (salvo) aviso(`PDF baixado e ${form.tipo.value.toLowerCase()} nº ${form.numero.value} salvo em "Meus orçamentos".`);
+  else aviso("PDF baixado, mas não foi possível salvar no servidor (sem conexão?). Clique em \"Salvar\" quando a internet voltar.", "");
 });
 
 /* ---------- Pedido vindo do simulador do site (link #i=...) ---------- */

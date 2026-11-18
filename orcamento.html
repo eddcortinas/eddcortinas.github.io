@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/orcamento.css?v=20">
+  <link rel="stylesheet" href="css/orcamento.css?v=21">
 </head>
 <body class="bloqueado">
   <!-- Login: a página só abre depois de entrar -->
@@ -31,9 +31,10 @@
     <img src="img/logo-edd-cortinas.png" alt="EDD Cortinas" class="topo__logo">
     <div>
       <h1>Gerador de orçamento</h1>
-      <p>Preencha e baixe o PDF com a sua logo. Os dados ficam salvos só neste aparelho.</p>
+      <p>Preencha e baixe o PDF com a sua logo. Ao baixar o PDF, ele já fica salvo em "Meus orçamentos".</p>
     </div>
     <div class="topo__acoes">
+      <button type="button" class="btn btn--primario" id="novo-topo">+ Novo orçamento</button>
       <button type="button" class="btn btn--linha" id="abrir-lista">Meus orçamentos</button>
       <button type="button" class="btn btn--linha" id="abrir-acessos" hidden>Gerenciar acessos</button>
       <button type="button" class="btn btn--linha" id="sair">Sair</button>
@@ -249,6 +250,6 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js" defer></script>
   <script src="js/tabela-tecidos.js?v=7" defer></script>
-  <script src="js/orcamento.js?v=35" defer></script>
+  <script src="js/orcamento.js?v=36" defer></script>
 </body>
 </html>

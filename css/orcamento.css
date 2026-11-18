@@ -159,6 +159,11 @@ label[hidden] { display: none; }
   .col-2, .col-3 { grid-column: 1 / -1; }
   .topo { padding: 14px 16px; }
   .topo__logo { height: 42px; }
+  /* Celular: os botões descem para uma linha própria, com o "Novo orçamento" ocupando a largura */
+  .topo { flex-wrap: wrap; gap: 12px; }
+  .topo__acoes { margin-left: 0; width: 100%; justify-content: stretch; }
+  .topo__acoes .btn { flex: 1 1 auto; }
+  .topo__acoes #novo-topo { flex-basis: 100%; }
 }
 /* Lista separada por mês e botão de reorganizar a numeração */
 .salvos__lista li.salvos__mes { display: block; padding: 16px 0 6px; border-top: 0; font-family: "Bricolage Grotesque", serif; font-weight: 700; font-size: .95rem; color: var(--azul); }
