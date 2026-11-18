@@ -142,9 +142,10 @@ async function carregarModelos() {
     Object.entries(TABELA_TECIDOS).forEach(([nome, tabela]) => {
       let m = MODELOS.find((x) => x.nome === nome);
       if (!m) {
-        // Modelo que só o gerador tem (ex.: painel romano): entra logo depois do painel
-        const ref = MODELOS.find((x) => x.nome === "Cortina painel");
-        m = { nome, grupo: ref ? ref.grupo : "Cortinas", preco: 0, calculo: "", alturamax: 2.8, acessorios: 0, guia: 0, prazo: ref ? ref.prazo : 10 };
+        // Modelo que só o gerador tem (ex.: painel romano, acortinado): entra logo depois do
+        // modelo indicado em "depoisDe" (sem ele, depois do painel)
+        const ref = MODELOS.find((x) => x.nome === (tabela.depoisDe || "Cortina painel"));
+        m = { nome, grupo: ref ? ref.grupo : "Cortinas", preco: 0, calculo: tabela.calculo || "", alturamax: tabela.alturamax || 2.8, acessorios: 0, guia: 0, prazo: ref ? ref.prazo : 10 };
         MODELOS.splice(ref ? MODELOS.indexOf(ref) + 1 : MODELOS.length, 0, m);
       }
       m.tabela = tabela;
@@ -180,6 +181,21 @@ function adicionaisDe(m, dados) {
   const ids = String(dados.adicionais || "").split(",").filter(Boolean);
   return ((m && m.tabela && m.tabela.adicionais) || []).filter((a) => ids.includes(a.id));
 }
+// Franzimento da cortina de tecido: o escolhido no item (linhos: 2,00 a 4,00) ou o padrão da linha
+// (3,00 nos linhos, 2,50 no Acortinado BK). Guardado como texto "3,30".
+function franzimentoUsado(m, dados) {
+  const t = m && m.tabela;
+  const padrao = (t && t.franzido) || TECIDO_FRANZIDO;
+  const opcoes = (t && t.franzimentos) || [];
+  const n = parseFloat(String(dados.franzimento || "").replace(",", "."));
+  return opcoes.some((o) => Math.abs(o - n) < 1e-9) ? n : padrao;
+}
+// "franzimento 3,30 (2,00 x 3,30 = 6,60 m)": vai no PDF junto do tecido
+function textoFranzimento(m, dados) {
+  const f = franzimentoUsado(m, dados);
+  const l = lerMedida(dados.largura);
+  return `franzimento ${numero.format(f)}` + (l ? ` (${numero.format(l)} x ${numero.format(f)} = ${numero.format(l * f)} m)` : "");
+}
 // "Coleção Screen 3% - tubo R38 - cor 701" (vai no PDF e na conta do item)
 function textoTecido(m, dados) {
   const c = colecaoDe(m, dados.categoria);
@@ -189,6 +205,7 @@ function textoTecido(m, dados) {
     dados.categoria && (m && m.tabela && m.tabela.rotulo === "Tecido" ? dados.categoria : `Coleção ${dados.categoria}`),
     opcao && (v.rotulo === "Tubo" ? `tubo ${opcao}` : opcao),
     dados.cor && `cor ${/^\d/.test(dados.cor) ? dados.cor : dados.cor.toLowerCase()}`,
+    m && m.tabela && m.tabela.franzimentos && (c || !m.tabela.colecoes.length) && textoFranzimento(m, dados),
   ].filter(Boolean).join(" - ");
 }
 
@@ -227,19 +244,21 @@ function calcularItem(dados) {
   let un = "m²";
   let extra = "";
   let avisoTecido = "";
-  if (m.calculo === "tecido" && colecao) {
-    // Tabela de tecidos: franzido da linha (3,00 linhos / 2,50 Acortinado BK); até 2,65 m vai invertido
+  if (m.calculo === "tecido" && (colecao || (m.tabela && m.tabela.franzimentos && !m.tabela.colecoes.length))) {
+    // Largura x franzimento (linhos e tecido com blackout: o escolhido, padrão 3,00; acortinado: 2,50).
+    // Até 2,65 m de altura vai invertido; acima disso, em pé com emendas
     un = "m";
-    const franzido = m.tabela.franzido || TECIDO_FRANZIDO;
+    const franzido = franzimentoUsado(m, dados);
     const limite = m.tabela.alturaInvertido || m.alturamax;
     const larguraTecido = largura * franzido;
+    const conta = `${numero.format(largura)} x ${numero.format(franzido)} = ${numero.format(larguraTecido)} m`;
     if (altura <= limite + 1e-9) {
       real = larguraTecido;
-      extra = `${numero.format(largura)} x ${numero.format(franzido)}, tecido invertido`;
+      extra = `${conta}, tecido invertido`;
     } else {
       const panos = Math.ceil(larguraTecido / m.alturamax - 1e-9);
       real = panos * altura;
-      extra = `tecido em pé com emendas, ${panos} pano(s) x ${numero.format(altura)} m`;
+      extra = `${conta} de largura, tecido em pé com emendas, ${panos} pano(s) x ${numero.format(altura)} m`;
       avisoTecido = `altura acima de ${numero.format(limite)} m: não dá para inverter o tecido, confirme com o cliente`;
     }
   } else if (m.calculo === "tecido") {
@@ -270,6 +289,7 @@ function calcularItem(dados) {
   if (qtd > 1) partes.push(`x ${qtd} peças`);
   if (extra) partes.push(`(${extra})`);
   if (minimo) partes.push(`- área mínima (real ${numero.format(real)} ${un})`);
+  if (avisoTecido && !colecao) partes.push(`· ATENÇÃO: ${avisoTecido}`);
   if (colecao) {
     const v = m.tabela.variante;
     if (v && v.automatica && !dados.variante) partes.push(`· tubo ${v.opcoes[varianteUsada(m, dados)]} automático`);
@@ -304,6 +324,7 @@ function adicionarItem(dados = {}) {
   const selCat = el.querySelector('[data-campo="categoria"]');
   const selVar = el.querySelector('[data-campo="variante"]');
   const selCor = el.querySelector('[data-campo="cor"]');
+  const selFranz = el.querySelector('[data-campo="franzimento"]');
   const campoAdic = el.querySelector('[data-campo="adicionais"]');
   const caixaAdic = el.querySelector(".item__adicionais");
   const opcao = (valor, texto) => { const o = document.createElement("option"); o.value = valor; o.textContent = texto; return o; };
@@ -316,7 +337,7 @@ function adicionarItem(dados = {}) {
     selCor.value = manter || "";
     selCor.closest("label").hidden = !cores.length && !manter;
   };
-  const preencherTecido = (manterCat, manterCor, manterVar, manterAdic) => {
+  const preencherTecido = (manterCat, manterCor, manterVar, manterAdic, manterFranz) => {
     const m = MODELOS[sel.value];
     const t = m && m.tabela;
     const cats = t ? t.colecoes : [];
@@ -331,6 +352,11 @@ function adicionarItem(dados = {}) {
     selVar.replaceChildren(...(v ? [...(v.automatica ? [opcao("", "Automático")] : []), ...v.opcoes.map((o) => opcao(o, o))] : []));
     selVar.value = v ? (v.opcoes.includes(manterVar) ? manterVar : v.automatica ? "" : v.opcoes[0]) : "";
     selVar.closest("label").hidden = !v;
+    // Franzimento (cortina de tecido): 2,00 a 4,00; sem escolha fica o padrão da linha (3,00)
+    const franz = (t && t.franzimentos) || [];
+    selFranz.replaceChildren(...franz.map((f) => opcao(numero.format(f), numero.format(f))));
+    selFranz.value = franz.length ? numero.format(franzimentoUsado(m, { franzimento: manterFranz })) : "";
+    selFranz.closest("label").hidden = !franz.length;
     // Adicionais: uma caixinha para cada um (guardados juntos, separados por vírgula)
     const marcados = String(manterAdic || "").split(",");
     const adic = (t && t.adicionais) || [];
@@ -348,7 +374,7 @@ function adicionarItem(dados = {}) {
     campoAdic.value = adic.filter((a) => marcados.includes(a.id)).map((a) => a.id).join(",");
     preencherCores(manterCor);
   };
-  preencherTecido(dados.categoria, dados.cor, dados.variante, dados.adicionais);
+  preencherTecido(dados.categoria, dados.cor, dados.variante, dados.adicionais, dados.franzimento);
   sel.addEventListener("change", () => preencherTecido());
   selCat.addEventListener("change", () => preencherCores());
   caixaAdic.addEventListener("change", () => {
@@ -371,7 +397,7 @@ function adicionarItem(dados = {}) {
   // Quadro "Tecido e acabamento": some quando o modelo não tem nada para escolher ali
   const painelTecido = el.querySelector(".item__tecido");
   const ajustarPainelTecido = () => {
-    painelTecido.hidden = [".item__categoria", ".item__variante", ".item__cor", ".item__adicionais", ".item__guia"]
+    painelTecido.hidden = [".item__categoria", ".item__variante", ".item__franzimento", ".item__cor", ".item__adicionais", ".item__guia"]
       .every((s) => el.querySelector(s).hidden);
   };
   selCat.addEventListener("change", ajustarPainelTecido);
@@ -548,6 +574,8 @@ function salvarRascunho() {
 // Itens guardados -> itens com o modelo certo da lista atual (pelo nome)
 function itensComModelo(itens) {
   return (itens || []).map(({ nome, ...d }) => {
+    // Acortinado BK era coleção da "Cortina de tecido com blackout"; agora é modelo próprio
+    if (nome === "Cortina de tecido com blackout" && d.categoria === "Acortinado BK") nome = "Cortina acortinado";
     if (nome) { const i = MODELOS.findIndex((m) => m.nome === nome); d.modelo = i >= 0 ? String(i) : ""; }
     return d;
   });

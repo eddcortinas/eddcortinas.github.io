@@ -228,6 +228,8 @@ label[hidden] { display: none; }
 .item__tecido-titulo { margin: 0 0 8px; font-size: .74rem; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: var(--suave); }
 .item__tecido-campos { grid-template-columns: 2fr 1fr 1fr; grid-template-areas: "col var cor"; }
 .item__tecido-campos:not(:has(.c-var:not([hidden]))) { grid-template-areas: "col cor ."; }
+/* Só o franzimento (tecido com blackout, sem tabela de tecidos) */
+.item__tecido-campos:not(:has(.c-col:not([hidden]))) { grid-template-areas: "var . ."; }
 .item__tecido input, .item__tecido select { background: var(--branco); }
 .item__opcoes { display: flex; flex-wrap: wrap; gap: 8px; }
 .item__opcoes:not(:has(> :not([hidden]))) { display: none; }
@@ -274,6 +276,7 @@ label[hidden] { display: none; }
   .item__tecido { margin: 12px 12px 0; }
   .item__tecido-campos { grid-template-columns: 1fr 1fr; grid-template-areas: "col col" "var cor"; }
   .item__tecido-campos:not(:has(.c-var:not([hidden]))) { grid-template-areas: "col col" "cor cor"; }
+  .item__tecido-campos:not(:has(.c-col:not([hidden]))) { grid-template-areas: "var var"; }
   .item__fim { padding: 12px 12px 0; grid-template-columns: 1fr; grid-template-areas: "desc" "unit"; }
   .item__rodape { padding: 10px 12px 12px; }
   .item__valor { font-size: 1rem; }
