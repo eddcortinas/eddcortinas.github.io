@@ -138,7 +138,6 @@ const TABELA_TECIDOS = {
     "franzimentos": [2.0, 2.5, 3.0, 3.3, 3.5, 4.0],
     "alturaInvertido": 2.65,
     "colecoes": [
-      { "nome": "Linho Flame", "cores": ["774 Prata", "775 Off White", "776 Grafite", "777 Fendy", "822 Cinza", "848 Branco", "849 Bege"], "precos": [100.00] },
       { "nome": "Linho Flame Irlandês", "cores": ["987 Bege 04", "988 Trigo 09", "989 Cinza 03", "990 Marfim 02", "991 Branco 01", "992 Prata 06"], "precos": [100.00] },
       { "nome": "Linho Nix", "cores": ["769 Off White", "770 Cru", "771 Castor"], "precos": [124.00] },
       { "nome": "Linho Safira", "cores": ["772 Safira 02"], "precos": [129.00] },
