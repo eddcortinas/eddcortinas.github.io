@@ -148,11 +148,24 @@ const TABELA_TECIDOS = {
       { "nome": "Linho Botone", "cores": ["1088 Off White", "1089 Bege"], "precos": [240.00] }
     ]
   },
-  /* Tecido com blackout: preço do site (R$ 173,91 o metro), sem tabela de tecidos; só o franzimento */
+  /* Linho com blackout: mesmo linho (coleção e cor) + blackout com cor própria.
+     Preço do metro = preço do linho + R$ 73,91 do blackout (Flame Irlandês: 100,00 + 73,91 = 173,91). */
   "Cortina de tecido com blackout": {
+    "rotulo": "Tecido",
     "franzido": 3.0,
     "franzimentos": [2.0, 2.5, 3.0, 3.3, 3.5, 4.0],
-    "colecoes": []
+    "alturaInvertido": 2.65,
+    "corBlackout": ["Branco", "Marfim", "Cinza", "Bege"],
+    "colecoes": [
+      { "nome": "Linho Flame Irlandês", "cores": ["987 Bege 04", "988 Trigo 09", "989 Cinza 03", "990 Marfim 02", "991 Branco 01", "992 Prata 06"], "precos": [173.91] },
+      { "nome": "Linho Nix", "cores": ["769 Off White", "770 Cru", "771 Castor"], "precos": [197.91] },
+      { "nome": "Linho Safira", "cores": ["772 Safira 02"], "precos": [202.91] },
+      { "nome": "Linho Israelense", "cores": ["773 Cinza"], "precos": [202.91] },
+      { "nome": "Linho Bora Bora", "cores": ["850 Cru"], "precos": [216.91] },
+      { "nome": "Linho Roma", "cores": ["714 Marfim", "767 Bege"], "precos": [232.91] },
+      { "nome": "Linho Absoluto", "cores": ["851 Off White", "852 Fendy (K2407-5A C#3)"], "precos": [288.91] },
+      { "nome": "Linho Botone", "cores": ["1088 Off White", "1089 Bege"], "precos": [313.91] }
+    ]
   },
   /* Acortinado BK: modelo à parte (só no gerador), franzimento 2,50 fixo */
   "Cortina acortinado": {
