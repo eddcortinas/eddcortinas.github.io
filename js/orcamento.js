@@ -142,9 +142,10 @@ async function carregarModelos() {
     Object.entries(TABELA_TECIDOS).forEach(([nome, tabela]) => {
       let m = MODELOS.find((x) => x.nome === nome);
       if (!m) {
-        // Modelo que só o gerador tem (ex.: painel romano): entra logo depois do painel
-        const ref = MODELOS.find((x) => x.nome === "Cortina painel");
-        m = { nome, grupo: ref ? ref.grupo : "Cortinas", preco: 0, calculo: "", alturamax: 2.8, acessorios: 0, guia: 0, prazo: ref ? ref.prazo : 10 };
+        // Modelo que só o gerador tem (ex.: painel romano, acortinado): entra logo depois do
+        // modelo indicado em "depoisDe" (sem ele, depois do painel)
+        const ref = MODELOS.find((x) => x.nome === (tabela.depoisDe || "Cortina painel"));
+        m = { nome, grupo: ref ? ref.grupo : "Cortinas", preco: 0, calculo: tabela.calculo || "", alturamax: tabela.alturamax || 2.8, acessorios: 0, guia: 0, prazo: ref ? ref.prazo : 10 };
         MODELOS.splice(ref ? MODELOS.indexOf(ref) + 1 : MODELOS.length, 0, m);
       }
       m.tabela = tabela;
@@ -204,7 +205,7 @@ function textoTecido(m, dados) {
     dados.categoria && (m && m.tabela && m.tabela.rotulo === "Tecido" ? dados.categoria : `Coleção ${dados.categoria}`),
     opcao && (v.rotulo === "Tubo" ? `tubo ${opcao}` : opcao),
     dados.cor && `cor ${/^\d/.test(dados.cor) ? dados.cor : dados.cor.toLowerCase()}`,
-    c && m.tabela.franzimentos && textoFranzimento(m, dados),
+    m && m.tabela && m.tabela.franzimentos && (c || !m.tabela.colecoes.length) && textoFranzimento(m, dados),
   ].filter(Boolean).join(" - ");
 }
 
@@ -243,8 +244,8 @@ function calcularItem(dados) {
   let un = "m²";
   let extra = "";
   let avisoTecido = "";
-  if (m.calculo === "tecido" && colecao) {
-    // Tabela de tecidos: largura x franzimento (linhos: o escolhido, padrão 3,00; Acortinado BK: 2,50).
+  if (m.calculo === "tecido" && (colecao || (m.tabela && m.tabela.franzimentos && !m.tabela.colecoes.length))) {
+    // Largura x franzimento (linhos e tecido com blackout: o escolhido, padrão 3,00; acortinado: 2,50).
     // Até 2,65 m de altura vai invertido; acima disso, em pé com emendas
     un = "m";
     const franzido = franzimentoUsado(m, dados);
@@ -288,6 +289,7 @@ function calcularItem(dados) {
   if (qtd > 1) partes.push(`x ${qtd} peças`);
   if (extra) partes.push(`(${extra})`);
   if (minimo) partes.push(`- área mínima (real ${numero.format(real)} ${un})`);
+  if (avisoTecido && !colecao) partes.push(`· ATENÇÃO: ${avisoTecido}`);
   if (colecao) {
     const v = m.tabela.variante;
     if (v && v.automatica && !dados.variante) partes.push(`· tubo ${v.opcoes[varianteUsada(m, dados)]} automático`);
@@ -572,6 +574,8 @@ function salvarRascunho() {
 // Itens guardados -> itens com o modelo certo da lista atual (pelo nome)
 function itensComModelo(itens) {
   return (itens || []).map(({ nome, ...d }) => {
+    // Acortinado BK era coleção da "Cortina de tecido com blackout"; agora é modelo próprio
+    if (nome === "Cortina de tecido com blackout" && d.categoria === "Acortinado BK") nome = "Cortina acortinado";
     if (nome) { const i = MODELOS.findIndex((m) => m.nome === nome); d.modelo = i >= 0 ? String(i) : ""; }
     return d;
   });

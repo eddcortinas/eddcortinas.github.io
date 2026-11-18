@@ -129,7 +129,8 @@ const TABELA_TECIDOS = {
     ]
   },
   /* Cortinas em tecido (preço por metro de tecido). Metragem = largura do vão x franzimento
-     (linhos: o vendedor escolhe 2,00 a 4,00, padrão 3,00; Acortinado BK: 2,50 fixo). Até 2,65 m de altura o tecido vai invertido (sem emendas);
+     (linhos e tecido com blackout: o vendedor escolhe 2,00 a 4,00, padrão 3,00;
+     Cortina acortinado: 2,50 fixo). Até 2,65 m de altura o tecido vai invertido (sem emendas);
      acima disso vai em pé com emendas (panos) e o gerador avisa para confirmar. Cor = código Emteco + nome. */
   "Cortina de tecido": {
     "rotulo": "Tecido",
@@ -148,7 +149,17 @@ const TABELA_TECIDOS = {
       { "nome": "Linho Botone", "cores": ["1088 Off White", "1089 Bege"], "precos": [240.00] }
     ]
   },
+  /* Tecido com blackout: preço do site (R$ 173,91 o metro), sem tabela de tecidos; só o franzimento */
   "Cortina de tecido com blackout": {
+    "franzido": 3.0,
+    "franzimentos": [2.0, 2.5, 3.0, 3.3, 3.5, 4.0],
+    "colecoes": []
+  },
+  /* Acortinado BK: modelo à parte (só no gerador), franzimento 2,50 fixo */
+  "Cortina acortinado": {
+    "depoisDe": "Cortina de tecido com blackout",
+    "calculo": "tecido",
+    "alturamax": 2.7,
     "rotulo": "Tecido",
     "franzido": 2.5,
     "alturaInvertido": 2.65,
