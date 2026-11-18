@@ -128,12 +128,13 @@ const TABELA_TECIDOS = {
       { "id": "premium", "nome": "Kit Premium (acessórios bege, cinza, preto ou marrom)", "pdf": "Kit Premium", "pct": 10 }
     ]
   },
-  /* Cortinas em tecido (preço por metro de tecido). Metragem = largura do vão x franzido
-     (3,00 nos linhos, 2,50 no Acortinado BK). Até 2,65 m de altura o tecido vai invertido (sem emendas);
+  /* Cortinas em tecido (preço por metro de tecido). Metragem = largura do vão x franzimento
+     (linhos: o vendedor escolhe 2,00 a 4,00, padrão 3,00; Acortinado BK: 2,50 fixo). Até 2,65 m de altura o tecido vai invertido (sem emendas);
      acima disso vai em pé com emendas (panos) e o gerador avisa para confirmar. Cor = código Emteco + nome. */
   "Cortina de tecido": {
     "rotulo": "Tecido",
     "franzido": 3.0,
+    "franzimentos": [2.0, 2.5, 3.0, 3.3, 3.5, 4.0],
     "alturaInvertido": 2.65,
     "colecoes": [
       { "nome": "Linho Flame", "cores": ["774 Prata", "775 Off White", "776 Grafite", "777 Fendy", "822 Cinza", "848 Branco", "849 Bege"], "precos": [100.00] },
