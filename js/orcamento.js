@@ -205,6 +205,7 @@ function textoTecido(m, dados) {
     dados.categoria && (m && m.tabela && m.tabela.rotulo === "Tecido" ? dados.categoria : `Coleção ${dados.categoria}`),
     opcao && (v.rotulo === "Tubo" ? `tubo ${opcao}` : opcao),
     dados.cor && `cor ${/^\d/.test(dados.cor) ? dados.cor : dados.cor.toLowerCase()}`,
+    m && m.tabela && m.tabela.corBlackout && dados.corBlackout && `blackout ${dados.corBlackout.toLowerCase()}`,
     m && m.tabela && m.tabela.franzimentos && (c || !m.tabela.colecoes.length) && textoFranzimento(m, dados),
   ].filter(Boolean).join(" - ");
 }
@@ -325,6 +326,7 @@ function adicionarItem(dados = {}) {
   const selVar = el.querySelector('[data-campo="variante"]');
   const selCor = el.querySelector('[data-campo="cor"]');
   const selFranz = el.querySelector('[data-campo="franzimento"]');
+  const selBk = el.querySelector('[data-campo="corBlackout"]');
   const campoAdic = el.querySelector('[data-campo="adicionais"]');
   const caixaAdic = el.querySelector(".item__adicionais");
   const opcao = (valor, texto) => { const o = document.createElement("option"); o.value = valor; o.textContent = texto; return o; };
@@ -337,7 +339,7 @@ function adicionarItem(dados = {}) {
     selCor.value = manter || "";
     selCor.closest("label").hidden = !cores.length && !manter;
   };
-  const preencherTecido = (manterCat, manterCor, manterVar, manterAdic, manterFranz) => {
+  const preencherTecido = (manterCat, manterCor, manterVar, manterAdic, manterFranz, manterBk) => {
     const m = MODELOS[sel.value];
     const t = m && m.tabela;
     const cats = t ? t.colecoes : [];
@@ -357,6 +359,12 @@ function adicionarItem(dados = {}) {
     selFranz.replaceChildren(...franz.map((f) => opcao(numero.format(f), numero.format(f))));
     selFranz.value = franz.length ? numero.format(franzimentoUsado(m, { franzimento: manterFranz })) : "";
     selFranz.closest("label").hidden = !franz.length;
+    // Cor do blackout (linho com blackout): separada da cor do linho
+    const coresBk = (t && t.corBlackout) || [];
+    selBk.replaceChildren(...(coresBk.length ? [opcao("", "Escolha"), ...coresBk.map((c) => opcao(c, c))] : []));
+    if (manterBk && !coresBk.includes(manterBk)) selBk.appendChild(opcao(manterBk, manterBk));
+    selBk.value = coresBk.length || manterBk ? manterBk || "" : "";
+    selBk.closest("label").hidden = !coresBk.length;
     // Adicionais: uma caixinha para cada um (guardados juntos, separados por vírgula)
     const marcados = String(manterAdic || "").split(",");
     const adic = (t && t.adicionais) || [];
@@ -374,7 +382,7 @@ function adicionarItem(dados = {}) {
     campoAdic.value = adic.filter((a) => marcados.includes(a.id)).map((a) => a.id).join(",");
     preencherCores(manterCor);
   };
-  preencherTecido(dados.categoria, dados.cor, dados.variante, dados.adicionais, dados.franzimento);
+  preencherTecido(dados.categoria, dados.cor, dados.variante, dados.adicionais, dados.franzimento, dados.corBlackout);
   sel.addEventListener("change", () => preencherTecido());
   selCat.addEventListener("change", () => preencherCores());
   caixaAdic.addEventListener("change", () => {
@@ -397,7 +405,7 @@ function adicionarItem(dados = {}) {
   // Quadro "Tecido e acabamento": some quando o modelo não tem nada para escolher ali
   const painelTecido = el.querySelector(".item__tecido");
   const ajustarPainelTecido = () => {
-    painelTecido.hidden = [".item__categoria", ".item__variante", ".item__franzimento", ".item__cor", ".item__adicionais", ".item__guia"]
+    painelTecido.hidden = [".item__categoria", ".item__variante", ".item__franzimento", ".item__cor", ".item__cor-blackout", ".item__adicionais", ".item__guia"]
       .every((s) => el.querySelector(s).hidden);
   };
   selCat.addEventListener("change", ajustarPainelTecido);

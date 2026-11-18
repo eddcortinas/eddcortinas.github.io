@@ -219,7 +219,7 @@ label[hidden] { display: none; }
 .item__peca { padding: 14px 14px 0; grid-template-columns: 1.3fr 2.4fr .8fr .8fr .6fr; grid-template-areas: "amb mod larg alt qtd"; }
 .item--avulso .item__peca { grid-template-areas: "amb mod mod mod qtd"; }
 .c-amb { grid-area: amb; } .c-mod { grid-area: mod; } .c-larg { grid-area: larg; } .c-alt { grid-area: alt; } .c-qtd { grid-area: qtd; }
-.c-col { grid-area: col; } .c-var { grid-area: var; } .c-cor { grid-area: cor; }
+.c-col { grid-area: col; } .c-var { grid-area: var; } .c-cor { grid-area: cor; } .c-bk { grid-area: bk; }
 .c-desc { grid-area: desc; } .c-unit { grid-area: unit; }
 
 /* Quadro de tecido e acabamento */
@@ -230,6 +230,8 @@ label[hidden] { display: none; }
 .item__tecido-campos:not(:has(.c-var:not([hidden]))) { grid-template-areas: "col cor ."; }
 /* Só o franzimento (tecido com blackout, sem tabela de tecidos) */
 .item__tecido-campos:not(:has(.c-col:not([hidden]))) { grid-template-areas: "var . ."; }
+/* Linho com blackout: tecido, franzimento, cor do linho e cor do blackout */
+.item__tecido-campos:has(.c-bk:not([hidden])) { grid-template-columns: 2fr 1fr 1fr 1fr; grid-template-areas: "col var cor bk"; }
 .item__tecido input, .item__tecido select { background: var(--branco); }
 .item__opcoes { display: flex; flex-wrap: wrap; gap: 8px; }
 .item__opcoes:not(:has(> :not([hidden]))) { display: none; }
@@ -277,6 +279,7 @@ label[hidden] { display: none; }
   .item__tecido-campos { grid-template-columns: 1fr 1fr; grid-template-areas: "col col" "var cor"; }
   .item__tecido-campos:not(:has(.c-var:not([hidden]))) { grid-template-areas: "col col" "cor cor"; }
   .item__tecido-campos:not(:has(.c-col:not([hidden]))) { grid-template-areas: "var var"; }
+  .item__tecido-campos:has(.c-bk:not([hidden])) { grid-template-columns: 1fr 1fr; grid-template-areas: "col col" "var var" "cor bk"; }
   .item__fim { padding: 12px 12px 0; grid-template-columns: 1fr; grid-template-areas: "desc" "unit"; }
   .item__rodape { padding: 10px 12px 12px; }
   .item__valor { font-size: 1rem; }
