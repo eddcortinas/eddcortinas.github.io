@@ -3,7 +3,7 @@ import json, os, sys
 from urllib.parse import quote
 
 RAIZ = sys.argv[1]
-V_CSS, V_JS = 29, 1
+V_CSS, V_JS = 31, 1
 SITE = "https://eddcortinas.com.br"
 WHATS = "5585987334369"
 
@@ -50,7 +50,8 @@ MODELOS = [
        texto=["A cortina romana forma dobras horizontais quando sobe e fica lisa quando desce. É elegante e ocupa pouco espaço na lateral da janela."],
        preco=361.29, unidade="m2", prazo=12,
        fotos=[("projeto-15.jpg","Cortina romana, projeto da EDD Cortinas em Fortaleza"),
-              ("produto-painel-romano.jpg","Cortina romana em painéis ocupando a parede do quarto, projeto da EDD Cortinas em Fortaleza")]),
+              ("produto-painel-romano.jpg","Cortina romana em painéis ocupando a parede do quarto, projeto da EDD Cortinas em Fortaleza"),
+              ("projeto-romana-sala.jpg","Cortinas romanas lado a lado em sala de exposição, projeto da EDD Cortinas em Fortaleza")]),
   dict(slug="cortina-painel", nome="Cortina painel", grupo="Cortinas", img="produto-painel.jpg",
        alt="Cortina painel em quarto com vista, instalada pela EDD Cortinas",
        resumo="Painéis deslizantes, ótimos para janelas amplas e portas de vidro.",
@@ -61,7 +62,8 @@ MODELOS = [
        resumo="Off white, sand, black e mais.",
        texto=["A cortina double vision tem faixas que se alternam, permitindo regular a entrada de luz e a privacidade.",
               "Cores off white, sand, black e mais. O preço não inclui o reposteiro de tecido."],
-       preco=431.20, unidade="m2", prazo=10, fotos=[]),
+       preco=431.20, unidade="m2", prazo=10,
+       fotos=[("projeto-double-vision-sala.jpg","Cortina double vision em sala com painel de madeira, projeto da EDD Cortinas em Fortaleza")]),
   dict(slug="cortina-motorizada", nome="Cortina motorizada", grupo="Cortinas", img="produto-motorizada.jpg",
        alt="Cortinas rolô motorizadas em sala de jantar com vista, instaladas pela EDD Cortinas",
        resumo="Cortina rolô com motor e controle remoto. Também motorizamos outros modelos.",
