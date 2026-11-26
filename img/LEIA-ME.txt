@@ -26,6 +26,7 @@ produto-toldo-vertical.jpg        Toldo vertical, foto de dentro da varanda (car
 produto-toldo-fachada.jpg         Toldo vertical, foto da fachada (catálogo)
 projeto-double-vision-sala.jpg    Double vision em sala (página do modelo e catálogo)
 projeto-romana-sala.jpg           Romana em sala de exposição (página do modelo e catálogo)
+projeto-acortinado-quarto.jpg     Acortinado blackout em quarto (página do blackout e catálogo)
 
 projeto-01.jpg ... projeto-12.jpg Galeria de projetos (abrem ampliadas ao clicar)
 
