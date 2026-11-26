@@ -431,6 +431,8 @@ section[id] { scroll-margin-top: calc(var(--header-h) + 8px); }
   stroke-linecap: round;
   stroke-linejoin: round;
 }
+.servico--foto { overflow: hidden; }
+.servico__foto { display: block; width: calc(100% + 56px); max-width: none; margin: -30px -28px 18px; aspect-ratio: 4 / 3; object-fit: cover; }
 .servico p { flex: 1; color: var(--texto-suave); margin-bottom: 20px; }
 .servico__precos {
   width: 100%;

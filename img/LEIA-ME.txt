@@ -22,6 +22,8 @@ produto-vertical-pvc.jpg          Persiana vertical de PVC
 produto-horizontal-25.jpg         Persiana horizontal 25 mm
 produto-ph50.jpg                  Persiana horizontal 50 mm alumínio
 produto-horizontal-50-madeira.jpg Persiana horizontal 50 mm madeira
+produto-toldo-vertical.jpg        Toldo vertical, foto de dentro da varanda (card de Toldos e catálogo)
+produto-toldo-fachada.jpg         Toldo vertical, foto da fachada (catálogo)
 
 projeto-01.jpg ... projeto-12.jpg Galeria de projetos (abrem ampliadas ao clicar)
 

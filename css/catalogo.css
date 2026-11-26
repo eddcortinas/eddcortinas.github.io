@@ -39,6 +39,8 @@
 .cat-servicos { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
 .cat-servico { background: var(--branco); border-radius: var(--raio); padding: 22px; box-shadow: 0 1px 0 var(--borda); }
 .cat-servico h3 { font-size: 1.2rem; }
+.cat-servico__foto { display: block; width: calc(100% + 44px); max-width: none; margin: -22px -22px 16px; aspect-ratio: 4 / 3; object-fit: cover; border-radius: var(--raio) var(--raio) 0 0; }
+.cat-servico--foto { overflow: hidden; }
 .cat-servico p { color: var(--texto-suave); margin: 0; font-size: .95rem; }
 .cat-servico .cat-item__preco strong { font-size: 1.25rem; }
 

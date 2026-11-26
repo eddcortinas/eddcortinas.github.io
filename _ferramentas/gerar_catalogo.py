@@ -20,7 +20,7 @@ for attrs, nome in re.findall(r'<option (data-preco="[^>]*)>([^<]+)</option>', i
 # Fotos de projeto com a descrição que já está no site
 PROJETOS = re.findall(r'<img src="img/(projeto-\d+\.jpg)" alt="([^"]+)"', index)
 
-V = 1
+V = 2
 e = html.escape
 
 def card(m):
@@ -91,7 +91,7 @@ pagina = f"""<!DOCTYPE html>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/style.css?v=29">
+  <link rel="stylesheet" href="css/style.css?v=30">
   <link rel="stylesheet" href="css/catalogo.css?v={V}">
 </head>
 <body class="catalogo">
@@ -138,10 +138,12 @@ pagina = f"""<!DOCTYPE html>
     <section class="cat-secao" id="toldos-servicos">
       <h2>Toldos e serviços</h2>
       <div class="cat-servicos">
-        <div class="cat-servico">
+        <div class="cat-servico cat-servico--foto">
+          <img class="cat-servico__foto" src="img/produto-toldo-vertical.jpg" alt="Toldo vertical em tela screen na varanda, instalado pela EDD Cortinas em Fortaleza" loading="lazy" width="960" height="720">
           <h3>Toldo vertical (tela screen 5%)</h3>
           <p>Toldos sob medida para varandas, janelas e fachadas, protegendo do sol e da chuva.</p>
           <p class="cat-item__preco">m² a partir de <strong>{brl(float(toldo['preco']))}</strong> + {brl(float(toldo['acessorios']))} de acessórios por peça</p>
+          <div class="cat-item__mini"><img src="img/produto-toldo-fachada.jpg" alt="Toldo vertical na varanda vista pela fachada da casa, instalado pela EDD Cortinas em Fortaleza" loading="lazy"></div>
         </div>
         <div class="cat-servico">
           <h3>Higienização</h3>
