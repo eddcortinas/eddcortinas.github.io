@@ -1479,12 +1479,14 @@ function desenharLista() {
   const palavras = simples(document.querySelector("#busca-orc").value).split(/\s+/).filter(Boolean);
   const tipo = document.querySelector("#filtro-tipo").value;
   const status = document.querySelector("#filtro-status").value;
+  const mes = document.querySelector("#filtro-mes").value;
   const verArquivados = document.querySelector("#ver-arquivados").checked;
   const visiveis = orcamentosSalvos.filter((o) => {
     const texto = simples([o.cliente, o.numero, o.bairro].join(" "));
     return o.arquivado === verArquivados &&
       (!tipo || (o.tipo || "Orçamento") === tipo) &&
       (!status || o.status === status) &&
+      (!mes || mesDe(o) === mes) &&
       palavras.every((p) => texto.includes(p));
   });
   const soma = visiveis.reduce((t, o) => t + (o.total || 0), 0);
@@ -1494,7 +1496,7 @@ function desenharLista() {
     : "";
   listaOrc.innerHTML = "";
   if (!visiveis.length) {
-    listaOrc.innerHTML = `<li><span class="vazio">${verArquivados && !palavras.length && !tipo && !status ? "Nenhum pedido ou orçamento desativado." : orcamentosSalvos.length ? "Nada encontrado com esse filtro." : 'Nenhum orçamento salvo ainda. Use o botão "Salvar" ou "Baixar PDF".'}</span></li>`;
+    listaOrc.innerHTML = `<li><span class="vazio">${verArquivados && !palavras.length && !tipo && !status && !mes ? "Nenhum pedido ou orçamento desativado." : orcamentosSalvos.length ? "Nada encontrado com esse filtro." : 'Nenhum orçamento salvo ainda. Use o botão "Salvar" ou "Baixar PDF".'}</span></li>`;
     return;
   }
   // Separado por mês (o mais recente em cima); dentro do mês, orçamentos e depois pedidos, em ordem crescente
@@ -1528,7 +1530,7 @@ function desenharLista() {
     valor.textContent = reais.format(o.total || 0);
     const info = document.createElement("span");
     info.className = "salvos__info";
-    info.textContent = [o.bairro, `alterado em ${dataBR(String(o.atualizado || "").slice(0, 10))}`, o.dono !== usuarioAtual && o.dono ? `feito por ${o.dono}` : ""].filter(Boolean).join(" · ");
+    info.textContent = [o.bairro, o.data ? `de ${dataBR(o.data)}` : "", `alterado em ${dataBR(String(o.atualizado || "").slice(0, 10))}`, o.dono !== usuarioAtual && o.dono ? `feito por ${o.dono}` : ""].filter(Boolean).join(" · ");
 
     const acoes = document.createElement("div");
     acoes.className = "salvos__acoes";
@@ -1615,7 +1617,61 @@ async function carregarLista() {
   if (!r.ok) { listaOrc.innerHTML = ""; return avisoLista(r.erro || "Não foi possível carregar a lista."); }
   orcamentosSalvos = r.orcamentos;
   montarClientes(orcamentosSalvos);
+  aplicarDatasGuardadas(orcamentosSalvos);
+  montarFiltroMes();
   desenharLista();
+  // Os que vieram sem a data do documento: busca a data (uma vez só) e redesenha já no mês certo
+  if (await buscarDatasQueFaltam(orcamentosSalvos)) { montarFiltroMes(); desenharLista(); }
+}
+
+/* Data do documento na lista. O servidor só manda a data nos salvos depois que ele foi atualizado;
+   sem ela, o documento caía no mês em que foi alterado pela última vez (mudar o status ou baixar o PDF
+   de um orçamento de outubro jogava ele para novembro, e "outubro" sumia da lista).
+   Aqui a data é lida do próprio documento e guardada neste aparelho para não buscar de novo. */
+const CHAVE_DATAS = "edd-orcamento-datas";
+function lerDatasGuardadas() {
+  try { return JSON.parse(localStorage.getItem(CHAVE_DATAS)) || {}; } catch (e) { return {}; }
+}
+function aplicarDatasGuardadas(lista) {
+  const guardadas = lerDatasGuardadas();
+  lista.forEach((o) => {
+    const g = guardadas[o.id];
+    // Só vale se o documento não mudou desde que a data foi lida
+    if (!o.data && g && g.a === o.atualizado) o.data = g.d;
+  });
+}
+async function buscarDatasQueFaltam(lista) {
+  const faltam = lista.filter((o) => !o.data);
+  if (!faltam.length) return false;
+  const guardadas = lerDatasGuardadas();
+  let achou = false;
+  const fila = faltam.slice();
+  const trabalhador = async () => {
+    while (fila.length) {
+      const o = fila.shift();
+      const r = await api("GET", `/orcamentos/${o.id}`).catch(() => null);
+      const d = r && r.ok && r.dados && r.dados.campos && r.dados.campos.data;
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(d || "")) continue;
+      o.data = d;
+      guardadas[o.id] = { a: o.atualizado, d };
+      achou = true;
+    }
+  };
+  await Promise.all([1, 2, 3, 4].map(trabalhador));
+  // Tira da memória os que não existem mais
+  const ids = new Set(lista.map((o) => o.id));
+  Object.keys(guardadas).forEach((id) => { if (!ids.has(id)) delete guardadas[id]; });
+  try { localStorage.setItem(CHAVE_DATAS, JSON.stringify(guardadas)); } catch (e) {}
+  return achou;
+}
+// Opções do filtro de mês: os meses que têm documento, o mais recente primeiro
+function montarFiltroMes() {
+  const sel = document.querySelector("#filtro-mes");
+  const atual = sel.value;
+  const meses = [...new Set(orcamentosSalvos.map(mesDe))].sort().reverse();
+  sel.innerHTML = '<option value="">Todos os meses</option>' +
+    meses.map((m) => `<option value="${m}">${nomeMes(m)}</option>`).join("");
+  sel.value = meses.includes(atual) ? atual : "";
 }
 /* ---------- Cadastro de clientes ----------
    Vem dos orçamentos e pedidos já salvos no servidor (os seus; o administrador vê de todos).
@@ -1782,7 +1838,7 @@ document.querySelector("#abrir-lista").addEventListener("click", () => {
   carregarLista();
 });
 document.querySelector("#fechar-lista").addEventListener("click", () => painelLista.close());
-["#busca-orc", "#filtro-tipo", "#filtro-status", "#ver-arquivados"].forEach((s) => {
+["#busca-orc", "#filtro-tipo", "#filtro-status", "#filtro-mes", "#ver-arquivados"].forEach((s) => {
   document.querySelector(s).addEventListener("input", desenharLista);
 });
 
