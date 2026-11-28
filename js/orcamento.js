@@ -611,6 +611,8 @@ function carregarRascunho() {
 function limparFormulario() {
   form.reset();
   form.idServidor.value = "";
+  form.clienteSalvo.value = "";
+  form.numeroSalvo.value = "";
   form.previsaoAuto.value = "1";
   form.pagamentoAuto.value = "1";
 }
@@ -705,6 +707,7 @@ function fecharAtual() {
   const temAlgo = !!form.cliente.value.trim() || t.total > 0;
   let envio = Promise.resolve();
   if (temAlgo) {
+    separarSeTrocouCliente();
     const dados = dadosAtuais();
     envio = api("POST", "/orcamentos", { id: form.idServidor.value, dados, resumo: resumoPara(dados, t.total) }).catch(() => null);
   }
@@ -982,7 +985,8 @@ form.addEventListener("submit", async (e) => {
   // porque o servidor pode trocar o número e o PDF precisa sair com o número que ficou salvo.
   const salvo = await salvarNoServidor({ silencioso: true });
   await gerarPDF();
-  if (salvo) aviso(`PDF baixado e ${form.tipo.value.toLowerCase()} nº ${form.numero.value} salvo em "Meus orçamentos".`);
+  if (salvo) aviso(`PDF baixado e ${form.tipo.value.toLowerCase()} nº ${form.numero.value} salvo em "Meus orçamentos".` +
+    (ultimoSeparado ? ` Como o cliente mudou, ele foi salvo como novo; o de ${ultimoSeparado} continua salvo.` : ""));
   else aviso("PDF baixado, mas não foi possível salvar no servidor (sem conexão?). Clique em \"Salvar\" quando a internet voltar.", "");
 });
 
@@ -1397,6 +1401,37 @@ function resumoPara(dados, total) {
   return { numero: c.numero, tipo: c.tipo, cliente: c.cliente, bairro: c.bairro, data: c.data, total };
 }
 
+/* Proteção: um orçamento salvo que está na tela e recebe outro cliente por cima vira um orçamento NOVO.
+   Antes, salvar (ou baixar o PDF) gravava o novo cliente no lugar do antigo, e o antigo sumia da lista. */
+const nomeSimples = (v) => String(v || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/\s+/g, " ").trim();
+let resumoPorId = new Map();
+function clienteDoSalvo() {
+  if (form.clienteSalvo.value.trim()) return form.clienteSalvo.value;
+  const o = resumoPorId.get(form.idServidor.value);
+  return o ? o.cliente || "" : "";
+}
+function trocouCliente() {
+  if (!form.idServidor.value) return false;
+  const antigo = nomeSimples(clienteDoSalvo());
+  const atual = nomeSimples(form.cliente.value);
+  // Só completou ou encurtou o nome ("Maria" -> "Maria Silva"): é o mesmo cliente
+  return !!antigo && !!atual && !antigo.includes(atual) && !atual.includes(antigo);
+}
+// Se trocou o cliente, separa do antigo: id novo e (se o número não foi mexido) número novo. Devolve o nome antigo
+function separarSeTrocouCliente() {
+  if (!trocouCliente()) return "";
+  const antigo = clienteDoSalvo().trim();
+  const numAntigo = form.numeroSalvo.value || (resumoPorId.get(form.idServidor.value) || {}).numero || "";
+  if (!numAntigo || form.numero.value.trim() === String(numAntigo).trim()) form.numero.value = "";
+  form.idServidor.value = "";
+  return antigo;
+}
+function marcarSalvo() {
+  form.clienteSalvo.value = form.cliente.value.trim();
+  form.numeroSalvo.value = form.numero.value.trim();
+}
+
+let ultimoSeparado = "";
 // Guarda no servidor o que está na tela. Devolve true se salvou
 async function salvarNoServidor({ silencioso = false } = {}) {
   const t = totais();
@@ -1404,10 +1439,14 @@ async function salvarNoServidor({ silencioso = false } = {}) {
     if (!silencioso) aviso("Preencha pelo menos o cliente ou um item antes de salvar.", "");
     return false;
   }
+  const idAntes = form.idServidor.value, numeroAntes = form.numero.value;
+  const clienteAntigo = separarSeTrocouCliente();
   const dados = dadosAtuais();
   const r = await api("POST", "/orcamentos", { id: form.idServidor.value, dados, resumo: resumoPara(dados, t.total) })
     .catch(() => ({ ok: false, erro: "Sem conexão com o servidor. O rascunho continua guardado neste aparelho." }));
   if (!r.ok) {
+    // Não salvou: volta como estava, para a próxima tentativa decidir de novo
+    if (clienteAntigo) { form.idServidor.value = idAntes; form.numero.value = numeroAntes; }
     if (!silencioso) aviso(r.erro || "Não foi possível salvar. Tente de novo.", "");
     return false;
   }
@@ -1415,8 +1454,13 @@ async function salvarNoServidor({ silencioso = false } = {}) {
   carregarClientes(); // cliente novo entra no cadastro
   // O servidor pode ter trocado o número (outra pessoa usou o mesmo ao mesmo tempo)
   if (r.numero) form.numero.value = r.numero;
+  marcarSalvo();
+  if (clienteAntigo) atualizar();
   salvarRascunho();
-  if (!silencioso) aviso(`${form.tipo.value} nº ${form.numero.value} salvo. Ele aparece em "Meus orçamentos" em qualquer aparelho.`);
+  ultimoSeparado = clienteAntigo;
+  if (!silencioso) aviso(clienteAntigo
+    ? `Cliente diferente: salvo como ${form.tipo.value.toLowerCase()} novo nº ${form.numero.value}. O de ${clienteAntigo} continua salvo em "Meus orçamentos".`
+    : `${form.tipo.value} nº ${form.numero.value} salvo. Ele aparece em "Meus orçamentos" em qualquer aparelho.`);
   return true;
 }
 document.querySelector("#salvar").addEventListener("click", async (e) => {
@@ -1616,6 +1660,7 @@ async function carregarLista() {
   const r = await api("GET", "/orcamentos").catch(() => ({ ok: false, erro: "Sem conexão com o servidor." }));
   if (!r.ok) { listaOrc.innerHTML = ""; return avisoLista(r.erro || "Não foi possível carregar a lista."); }
   orcamentosSalvos = r.orcamentos;
+  resumoPorId = new Map(orcamentosSalvos.map((o) => [o.id, o]));
   montarClientes(orcamentosSalvos);
   aplicarDatasGuardadas(orcamentosSalvos);
   montarFiltroMes();
@@ -1703,7 +1748,7 @@ function montarClientes(lista) {
 }
 async function carregarClientes() {
   const r = await api("GET", "/orcamentos").catch(() => null);
-  if (r && r.ok && Array.isArray(r.orcamentos)) montarClientes(r.orcamentos);
+  if (r && r.ok && Array.isArray(r.orcamentos)) { montarClientes(r.orcamentos); resumoPorId = new Map(r.orcamentos.map((o) => [o.id, o])); }
 }
 function fecharClientes() {
   listaClientes.hidden = true;
@@ -1799,6 +1844,7 @@ async function abrirSalvo(id, totalSalvo) {
   history.replaceState(null, "", location.pathname);
   aplicarDados(r.dados);
   form.idServidor.value = id;
+  marcarSalvo();
   atualizar();
   painelLista.close();
   aviso(`${form.tipo.value} nº ${form.numero.value} aberto. Depois de alterar, clique em "Salvar".`);
